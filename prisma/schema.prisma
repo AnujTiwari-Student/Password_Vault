@@ -1,0 +1,371 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  credentials
+  oauth
+  sso
+}
+
+enum VaultType {
+  org
+  personal
+}
+
+enum MemberRole {
+  owner
+  admin
+  member
+  viewer
+}
+
+enum ItemType {
+  login
+  note
+  totp
+}
+
+enum ShareTargetType {
+  vault
+  item
+}
+
+enum ShareGranteeType {
+  user
+  role
+}
+
+enum AuditSubjectType {
+  org
+  vault
+  item
+  member
+  invite
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  rejected
+  expired
+}
+
+model User {
+  id                         String         @id @default(auto()) @map("_id") @db.ObjectId
+  email                      String         @unique
+  name                       String?
+  image                      String?
+  email_verified             DateTime?
+  auth_hash                  String?
+  auth_provider              AuthProvider   @default(oauth)
+  umk_salt                   String?
+  master_passphrase_verifier String?
+  twofa_enabled              Boolean        @default(false)
+  totp_secret                String?
+  backup_codes               String[]
+  public_key                 String?
+  created_at                 DateTime       @default(now())
+  last_login                 DateTime?
+  account_type               String
+  accounts                   Account[]
+  vaults                     Vault[]
+  orgs                       Org[]          @relation("OrgOwner")
+  memberships                Membership[]
+  items                      Item[]         @relation("ItemCreator")
+  shares                     Share[]        @relation("ShareGranteeUser")
+  audits                     Audit[]        @relation("AuditActor")
+  invitesSent                Invite[]       @relation("InvitedBy")
+  logs                       Logs[]
+  created_teams              Team[]         @relation("TeamCreator")
+  Subscription               Subscription[]
+
+  @@index([account_type])
+  @@index([created_at])
+  @@index([auth_provider])
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @map("user_id") @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Org {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  owner_user_id String       @db.ObjectId
+  created_at    DateTime     @default(now())
+  owner         User         @relation("OrgOwner", fields: [owner_user_id], references: [id])
+  memberships   Membership[]
+  vaults        Vault[]
+  invites       Invite[]
+  audits        Audit[]
+  teams         Team[]
+
+  @@index([owner_user_id])
+  @@index([created_at])
+  @@index([name])
+}
+
+model Membership {
+  id                   String     @id @default(auto()) @map("_id") @db.ObjectId
+  org_id               String     @db.ObjectId
+  user_id              String     @db.ObjectId
+  role                 MemberRole @default(member)
+  ovk_wrapped_for_user String
+  created_at           DateTime   @default(now())
+  org                  Org        @relation(fields: [org_id], references: [id])
+  user                 User       @relation(fields: [user_id], references: [id])
+
+  @@unique([org_id, user_id])
+  @@index([org_id])
+  @@index([user_id])
+  @@index([role])
+  @@index([created_at])
+}
+
+model Team {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  org_id      String   @db.ObjectId
+  vault_id    String   @db.ObjectId
+  created_by  String   @db.ObjectId
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  org             Org   @relation(fields: [org_id], references: [id])
+  vault           Vault @relation(fields: [vault_id], references: [id])
+  created_by_user User  @relation("TeamCreator", fields: [created_by], references: [id])
+
+  @@unique([org_id, name])
+  @@index([org_id])
+  @@index([vault_id])
+  @@index([created_by])
+  @@index([created_at])
+  @@index([org_id, vault_id])
+}
+
+model Vault {
+  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
+  org_id             String?           @db.ObjectId
+  user_id            String?           @db.ObjectId
+  name               String
+  type               VaultType
+  ovk_id             String            @db.ObjectId
+  created_at         DateTime          @default(now())
+  org                Org?              @relation(fields: [org_id], references: [id])
+  user               User?             @relation(fields: [user_id], references: [id])
+  items              Item[]
+  shares             Share[]
+  OrgVaultKey        OrgVaultKey?      @relation(fields: [orgVaultKeyId], references: [id])
+  orgVaultKeyId      String?           @db.ObjectId
+  PersonalVaultKey   PersonalVaultKey? @relation(fields: [personalVaultKeyId], references: [id])
+  personalVaultKeyId String?           @db.ObjectId
+  teams              Team[]
+  Subscription       Subscription[]
+
+  @@unique([org_id, name])
+  @@unique([user_id, name])
+  @@index([org_id])
+  @@index([user_id])
+  @@index([type])
+  @@index([created_at])
+  @@index([ovk_id])
+}
+
+model Item {
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  vault_id         String     @db.ObjectId
+  type             ItemType[]
+  name             String
+  url              String?
+  username_ct      String?
+  password_ct      String?
+  note_ct          String?
+  totp_seed_ct     String?
+  item_key_wrapped String
+  tags             String[]
+  created_by       String     @db.ObjectId
+  updated_at       DateTime   @default(now())
+  vault            Vault      @relation(fields: [vault_id], references: [id])
+  creator          User       @relation("ItemCreator", fields: [created_by], references: [id])
+
+  @@index([vault_id])
+  @@index([created_by])
+  @@index([type])
+  @@index([updated_at])
+  @@index([tags])
+  @@index([name])
+  @@index([vault_id, type])
+  @@index([vault_id, updated_at])
+  @@map("item_types")
+}
+
+model Share {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  target_type  ShareTargetType
+  target_id    String           @db.ObjectId
+  grantee_type ShareGranteeType
+  grantee_id   String?          @db.ObjectId
+  grantee_role String?
+  created_at   DateTime         @default(now())
+  view         Boolean          @default(false)
+  edit         Boolean          @default(false)
+  share        Boolean          @default(false)
+  manage       Boolean          @default(false)
+  granteeUser  User?            @relation("ShareGranteeUser", fields: [grantee_id], references: [id])
+  Vault        Vault?           @relation(fields: [vaultId], references: [id])
+  vaultId      String?          @db.ObjectId
+
+  @@index([target_type, target_id])
+  @@index([grantee_type, grantee_id])
+  @@index([grantee_role])
+  @@index([created_at])
+  @@index([vaultId])
+}
+
+model Audit {
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  org_id        String           @db.ObjectId
+  actor_user_id String           @db.ObjectId
+  action        String
+  subject_type  AuditSubjectType
+  subject_id    String?          @db.ObjectId
+  ip            String?
+  ua            String?
+  ts            DateTime         @default(now())
+  meta          Json
+  org           Org              @relation(fields: [org_id], references: [id])
+  actor         User             @relation("AuditActor", fields: [actor_user_id], references: [id])
+
+  @@index([org_id])
+  @@index([actor_user_id])
+  @@index([action])
+  @@index([subject_type])
+  @@index([ts])
+  @@index([org_id, ts])
+  @@index([actor_user_id, ts])
+  @@index([subject_type, subject_id])
+}
+
+model Logs {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id      String   @db.ObjectId
+  action       String
+  subject_type String
+  ip           String?
+  ua           String?
+  ts           DateTime @default(now())
+  meta         Json
+  user         User     @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([action])
+  @@index([subject_type])
+  @@index([ts])
+  @@index([user_id, ts])
+  @@index([action, ts])
+}
+
+model Invite {
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  org_id     String       @db.ObjectId
+  email      String
+  role       MemberRole   @default(member)
+  status     InviteStatus @default(pending)
+  token      String       @unique @default(cuid())
+  expires_at DateTime
+  invited_by String       @db.ObjectId
+  created_at DateTime     @default(now())
+  org        Org          @relation(fields: [org_id], references: [id])
+  invitedBy  User         @relation("InvitedBy", fields: [invited_by], references: [id])
+
+  @@index([org_id])
+  @@index([email])
+  @@index([status])
+  @@index([expires_at])
+  @@index([invited_by])
+  @@index([org_id, email])
+  @@index([status, expires_at])
+}
+
+model OrgVaultKey {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  org_id     String   @db.ObjectId
+  ovk_cipher String
+  created_at DateTime @default(now())
+  vaults     Vault[]
+
+  @@index([org_id])
+  @@index([created_at])
+}
+
+model PersonalVaultKey {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id    String   @unique @db.ObjectId
+  ovk_cipher String
+  created_at DateTime @default(now())
+  vaults     Vault[]
+
+  @@index([created_at])
+}
+
+enum SubscriptionStatus {
+  active
+  cancelled
+  expired
+  suspended
+}
+
+model Subscription {
+  id                  String             @id @default(auto()) @map("_id") @db.ObjectId
+  vault_id            String             @db.ObjectId
+  user_id             String             @db.ObjectId
+  plan                String
+  status              SubscriptionStatus @default(active)
+  billing_cycle       String
+  amount              Float
+  currency            String
+  next_billing_date   DateTime?
+  last_payment_date   DateTime?
+  cancelled_at        DateTime?
+  will_downgrade_at   DateTime?
+  razorpay_order_id   String?
+  razorpay_payment_id String?
+  payment_method      String?
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
+
+  vault Vault @relation(fields: [vault_id], references: [id])
+  user  User  @relation(fields: [user_id], references: [id])
+
+  @@unique([vault_id, plan])
+  @@index([vault_id])
+  @@index([user_id])
+  @@index([status])
+  @@index([plan])
+  @@index([next_billing_date])
+  @@index([created_at])
+  @@index([vault_id, status])
+  @@index([user_id, status])
+}
