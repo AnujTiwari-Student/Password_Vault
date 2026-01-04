@@ -21,6 +21,7 @@ enum VaultType {
 enum MemberRole {
   owner
   admin
+  manager
   member
   viewer
 }
@@ -56,6 +57,24 @@ enum InviteStatus {
   expired
 }
 
+enum PlanType {
+  basic
+  professional
+  enterprise
+}
+
+enum BillingCycle {
+  monthly
+  annually
+}
+
+enum SubscriptionStatus {
+  active
+  cancelled
+  expired
+  suspended
+}
+
 model User {
   id                         String         @id @default(auto()) @map("_id") @db.ObjectId
   email                      String         @unique
@@ -75,6 +94,7 @@ model User {
   account_type               String
   accounts                   Account[]
   vaults                     Vault[]
+  vaultsCreated              Vault[]        @relation("VaultCreator")
   orgs                       Org[]          @relation("OrgOwner")
   memberships                Membership[]
   items                      Item[]         @relation("ItemCreator")
@@ -83,7 +103,7 @@ model User {
   invitesSent                Invite[]       @relation("InvitedBy")
   logs                       Logs[]
   created_teams              Team[]         @relation("TeamCreator")
-  Subscription               Subscription[]
+  subscriptions              Subscription[]
 
   @@index([account_type])
   @@index([created_at])
@@ -110,20 +130,51 @@ model Account {
 }
 
 model Org {
-  id            String       @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  owner_user_id String       @db.ObjectId
-  created_at    DateTime     @default(now())
-  owner         User         @relation("OrgOwner", fields: [owner_user_id], references: [id])
-  memberships   Membership[]
-  vaults        Vault[]
-  invites       Invite[]
-  audits        Audit[]
-  teams         Team[]
+  id                  String             @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  owner_user_id       String             @db.ObjectId
+  plan_type           PlanType           @default(basic)
+  max_vaults          Int                @default(1)
+  max_items           Int?               @default(100)
+  max_members         Int                @default(3)
+  features            String[]
+  plan_start_date     DateTime           @default(now())
+  plan_renewal_date   DateTime
+  billing_cycle       BillingCycle       @default(monthly)
+  created_at          DateTime           @default(now())
+  owner               User               @relation("OrgOwner", fields: [owner_user_id], references: [id])
+  memberships         Membership[]
+  vaults              Vault[]
+  invites             Invite[]
+  audits              Audit[]
+  teams               Team[]
+  planConfiguration   PlanConfiguration? @relation(fields: [planConfigurationId], references: [id])
+  planConfigurationId String?            @db.ObjectId
 
   @@index([owner_user_id])
   @@index([created_at])
   @@index([name])
+  @@index([plan_type])
+  @@index([plan_renewal_date])
+}
+
+model PlanConfiguration {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  plan_name     PlanType @unique
+  display_name  String
+  max_vaults    Int?
+  max_items     Int?
+  max_members   Int?
+  features      String[]
+  monthly_price Float
+  annual_price  Float
+  description   String?
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  organizations Org[]
+
+  @@index([is_active])
 }
 
 model Membership {
@@ -132,6 +183,7 @@ model Membership {
   user_id              String     @db.ObjectId
   role                 MemberRole @default(member)
   ovk_wrapped_for_user String
+  permissions          String[]
   created_at           DateTime   @default(now())
   org                  Org        @relation(fields: [org_id], references: [id])
   user                 User       @relation(fields: [user_id], references: [id])
@@ -152,10 +204,9 @@ model Team {
   created_by  String   @db.ObjectId
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-
-  org             Org   @relation(fields: [org_id], references: [id])
-  vault           Vault @relation(fields: [vault_id], references: [id])
-  created_by_user User  @relation("TeamCreator", fields: [created_by], references: [id])
+  org         Org      @relation(fields: [org_id], references: [id])
+  vault       Vault    @relation(fields: [vault_id], references: [id])
+  creator     User     @relation("TeamCreator", fields: [created_by], references: [id])
 
   @@unique([org_id, name])
   @@index([org_id])
@@ -170,19 +221,23 @@ model Vault {
   org_id             String?           @db.ObjectId
   user_id            String?           @db.ObjectId
   name               String
+  description        String?
   type               VaultType
   ovk_id             String            @db.ObjectId
+  created_by         String            @db.ObjectId
   created_at         DateTime          @default(now())
+  updated_at         DateTime          @updatedAt
   org                Org?              @relation(fields: [org_id], references: [id])
   user               User?             @relation(fields: [user_id], references: [id])
+  creator            User              @relation("VaultCreator", fields: [created_by], references: [id])
   items              Item[]
   shares             Share[]
-  OrgVaultKey        OrgVaultKey?      @relation(fields: [orgVaultKeyId], references: [id])
-  orgVaultKeyId      String?           @db.ObjectId
-  PersonalVaultKey   PersonalVaultKey? @relation(fields: [personalVaultKeyId], references: [id])
-  personalVaultKeyId String?           @db.ObjectId
   teams              Team[]
-  Subscription       Subscription[]
+  subscriptions      Subscription[]
+  orgVaultKey        OrgVaultKey?      @relation(fields: [orgVaultKeyId], references: [id])
+  orgVaultKeyId      String?           @db.ObjectId
+  personalVaultKey   PersonalVaultKey? @relation(fields: [personalVaultKeyId], references: [id])
+  personalVaultKeyId String?           @db.ObjectId
 
   @@unique([org_id, name])
   @@unique([user_id, name])
@@ -190,7 +245,10 @@ model Vault {
   @@index([user_id])
   @@index([type])
   @@index([created_at])
+  @@index([created_by])
   @@index([ovk_id])
+  @@index([org_id, type])
+  @@index([user_id, type])
 }
 
 model Item {
@@ -206,6 +264,7 @@ model Item {
   item_key_wrapped String
   tags             String[]
   created_by       String     @db.ObjectId
+  created_at       DateTime   @default(now())
   updated_at       DateTime   @default(now())
   vault            Vault      @relation(fields: [vault_id], references: [id])
   creator          User       @relation("ItemCreator", fields: [created_by], references: [id])
@@ -213,6 +272,7 @@ model Item {
   @@index([vault_id])
   @@index([created_by])
   @@index([type])
+  @@index([created_at])
   @@index([updated_at])
   @@index([tags])
   @@index([name])
@@ -234,7 +294,7 @@ model Share {
   share        Boolean          @default(false)
   manage       Boolean          @default(false)
   granteeUser  User?            @relation("ShareGranteeUser", fields: [grantee_id], references: [id])
-  Vault        Vault?           @relation(fields: [vaultId], references: [id])
+  vault        Vault?           @relation(fields: [vaultId], references: [id])
   vaultId      String?          @db.ObjectId
 
   @@index([target_type, target_id])
@@ -330,13 +390,6 @@ model PersonalVaultKey {
   @@index([created_at])
 }
 
-enum SubscriptionStatus {
-  active
-  cancelled
-  expired
-  suspended
-}
-
 model Subscription {
   id                  String             @id @default(auto()) @map("_id") @db.ObjectId
   vault_id            String             @db.ObjectId
@@ -355,9 +408,8 @@ model Subscription {
   payment_method      String?
   created_at          DateTime           @default(now())
   updated_at          DateTime           @updatedAt
-
-  vault Vault @relation(fields: [vault_id], references: [id])
-  user  User  @relation(fields: [user_id], references: [id])
+  vault               Vault              @relation(fields: [vault_id], references: [id])
+  user                User               @relation(fields: [user_id], references: [id])
 
   @@unique([vault_id, plan])
   @@index([vault_id])
