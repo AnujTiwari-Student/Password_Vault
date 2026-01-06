@@ -3,7 +3,6 @@
 import { prisma } from "@/db/index";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
 
 interface SecuritySettings {
   require_2fa: boolean;
@@ -64,10 +63,10 @@ export async function updateSecuritySettings(
         subject_type: "org",
         subject_id: organizationId,
         ts: new Date(),
-        meta: {
+        meta: JSON.parse(JSON.stringify({
           type: "security_settings",
           settings: settings,
-        } as unknown as Prisma.InputJsonValue,
+        })),
       },
     });
 
@@ -76,10 +75,10 @@ export async function updateSecuritySettings(
         user_id: session.user.id,
         action: "security_settings_updated",
         subject_type: "organization",
-        meta: {
+        meta: JSON.parse(JSON.stringify({
           organization_id: organizationId,
           settings: settings,
-        } as unknown as Prisma.InputJsonValue,
+        })),
       },
     });
 
@@ -172,11 +171,11 @@ export async function revokeSession(sessionId: string, organizationId: string) {
         user_id: session.user.id,
         action: "session_revoked",
         subject_type: "session",
-        meta: {
+        meta: JSON.parse(JSON.stringify({
           session_id: sessionId,
           organization_id: organizationId,
           revoked_by: session.user.id,
-        } as unknown as Prisma.InputJsonValue,
+        })),
       },
     });
 
@@ -188,9 +187,9 @@ export async function revokeSession(sessionId: string, organizationId: string) {
         subject_type: "member",
         subject_id: sessionId,
         ts: new Date(),
-        meta: {
+        meta: JSON.parse(JSON.stringify({
           session_id: sessionId,
-        } as unknown as Prisma.InputJsonValue,
+        })),
       },
     });
 

@@ -2,7 +2,6 @@
 
 import { prisma } from "@/db/index";
 import { auth } from "@/lib/auth";
-import { Prisma } from "@prisma/client";
 
 type AuditSubjectType = "vault" | "org" | "member" | "item" | "invite"
 
@@ -51,7 +50,7 @@ export async function createAuditLog(
     resourceId?: string;
     ipAddress?: string;
     userAgent?: string;
-    metadata?: Record<string, unknown>;
+    metadata?: object;
   }
 ) {
   try {
@@ -70,7 +69,7 @@ export async function createAuditLog(
         ip: details.ipAddress,
         ua: details.userAgent,
         ts: new Date(),
-        meta: (details.metadata || {}) as unknown as Prisma.InputJsonValue,
+        meta: details.metadata || {},
       },
     });
 
@@ -329,7 +328,7 @@ export async function configureRetentionPolicy(
         meta: {
           organization_id: organizationId,
           policy: policy,
-        } as unknown as Prisma.InputJsonValue,
+        },
       },
     });
 
