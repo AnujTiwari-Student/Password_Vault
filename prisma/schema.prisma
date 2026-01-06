@@ -391,16 +391,29 @@ model PersonalVaultKey {
 }
 
 model Subscription {
-  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
-  vault_id               String   @db.ObjectId
-  user_id                String   @db.ObjectId
-  stripe_customer_id     String
-  stripe_subscription_id String   @unique
-  price_id               String
-  plan                   PlanType
-  billing_cycle           BillingCycle
-  status                 SubscriptionStatus
-  current_period_end     DateTime
-  created_at             DateTime @default(now())
-  updated_at             DateTime @updatedAt
+  id                     String             @id @default(auto()) @map("_id") @db.ObjectId
+  vault_id               String             @db.ObjectId
+  user_id                String             @db.ObjectId
+  stripe_customer_id     String?
+  stripe_subscription_id String?            @unique
+  price_id               String?
+  plan                   String
+  billing_cycle          String
+  status                 String
+  amount                 Float?
+  currency               String?
+  payment_method         String?
+  next_billing_date      DateTime?
+  last_payment_date      DateTime?
+  cancelled_at           DateTime?
+  will_downgrade_at      DateTime?
+  current_period_end     DateTime?
+  created_at             DateTime           @default(now())
+  updated_at             DateTime           @updatedAt
+  
+  user                   User               @relation(fields: [user_id], references: [id])
+  vault                  Vault              @relation(fields: [vault_id], references: [id])
+  
+  @@map("subscriptions")
 }
+
