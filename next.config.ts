@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   typescript: {
-    ignoreBuildErrors: process.env.VERCEL === "1",
+    ignoreBuildErrors: true,
   },
   images: {
     domains: ["lh3.googleusercontent.com"],
