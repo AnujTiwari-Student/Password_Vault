@@ -127,7 +127,7 @@ export async function getActiveSessions(organizationId: string) {
       take: 50,
     });
 
-    const activeSessions = sessions.map((log) => ({
+    const activeSessions = sessions.map((log: typeof sessions[0]) => ({
       id: log.id,
       user_id: log.user_id,
       ip_address: log.ip,
