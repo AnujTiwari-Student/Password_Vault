@@ -64,11 +64,10 @@ export async function updateSecuritySettings(
         subject_type: "org",
         subject_id: organizationId,
         ts: new Date(),
-        // @ts-expect-error Prisma.JsonObject type issue
         meta: {
           type: "security_settings",
           settings: settings,
-        },
+        } as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -77,11 +76,10 @@ export async function updateSecuritySettings(
         user_id: session.user.id,
         action: "security_settings_updated",
         subject_type: "organization",
-        // @ts-expect-error Prisma.JsonObject type issue
         meta: {
           organization_id: organizationId,
           settings: settings,
-        },
+        } as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -178,7 +176,7 @@ export async function revokeSession(sessionId: string, organizationId: string) {
           session_id: sessionId,
           organization_id: organizationId,
           revoked_by: session.user.id,
-        } as Prisma.InputJsonValue,
+        } as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -192,7 +190,7 @@ export async function revokeSession(sessionId: string, organizationId: string) {
         ts: new Date(),
         meta: {
           session_id: sessionId,
-        } as Prisma.InputJsonValue,
+        } as unknown as Prisma.InputJsonValue,
       },
     });
 

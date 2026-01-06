@@ -70,8 +70,7 @@ export async function createAuditLog(
         ip: details.ipAddress,
         ua: details.userAgent,
         ts: new Date(),
-        // @ts-expect-error Prisma.JsonObject type issue
-        meta: details.metadata,
+        meta: (details.metadata || {}) as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -260,7 +259,7 @@ export async function exportAuditLogs(
       metadata: {
         export_format: filters?.format || "csv",
         records_count: logs.length,
-        filters: filters,
+        filters: filters || {},
       },
     });
 
@@ -330,7 +329,7 @@ export async function configureRetentionPolicy(
         meta: {
           organization_id: organizationId,
           policy: policy,
-        },
+        } as unknown as Prisma.InputJsonValue,
       },
     });
 
