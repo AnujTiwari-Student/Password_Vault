@@ -1,30 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserOvkCypherKey } from "@/data/cyper-key-data";
+import { prisma } from "@/db";
+import { currentUser } from "@/lib/current-user";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get("id");
-
-  console.log("API hit for user vault key:", userId);
-
-  if (!userId) {
-    return NextResponse.json({ error: "Invalid orgId type", status: 400 }, { status: 400 });
-  }
-
   try {
-    const personalVaultKey = await getUserOvkCypherKey(userId);
-    if (!personalVaultKey) {
-      console.warn(`❌ Org vault key not found for orgId: ${userId}`);
-      return NextResponse.json({ error: "Org vault key not found", status: 404 }, { status: 404 });
+    const user = await currentUser();
+    if (!user || !user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log("✅ orgVaultKey found:", personalVaultKey);
-    return NextResponse.json({ ovk_cipher: personalVaultKey.ovk_cipher });
+    const searchParams = req.nextUrl.searchParams;
+    const vaultId = searchParams.get('id');
+
+    if (!vaultId) {
+      return NextResponse.json({ 
+        error: 'Vault ID is required' 
+      }, { status: 400 });
+    }
+
+    const vault = await prisma.vault.findFirst({
+      where: {
+        id: vaultId,
+        user_id: user.id,
+        type: 'personal'
+      },
+      include: {
+        personalVaultKey: {
+          select: {
+            ovk_cipher: true
+          }
+        }
+      }
+    });
+
+    if (!vault) {
+      return NextResponse.json({ 
+        error: 'Personal vault not found' 
+      }, { status: 404 });
+    }
+
+    if (!vault.personalVaultKey?.ovk_cipher) {
+      return NextResponse.json({ 
+        error: 'Personal vault OVK not found' 
+      }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      ovk_cipher: vault.personalVaultKey.ovk_cipher,
+      vault_id: vault.id,
+      vault_name: vault.name
+    }, { status: 200 });
+
   } catch (error) {
-    console.error("💥 Error fetching org vault key:", error);
-    return NextResponse.json(
-      { error: "Internal server error while fetching org vault key", status: 500 },
-      { status: 500 }
-    );
+    console.error('Error fetching personal vault OVK:', error);
+    return NextResponse.json({ 
+      error: 'Internal Server Error',
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+    }, { status: 500 });
   }
 }

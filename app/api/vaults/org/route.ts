@@ -13,15 +13,12 @@ export async function GET(req: NextRequest) {
     const vaultId = searchParams.get('id');
     const orgId = searchParams.get('org_id');
 
-    console.log('🔐 [/api/vaults/org] Called:', { vaultId, orgId, userId: user.id });
-
     if (!vaultId || !orgId) {
       return NextResponse.json({ 
         error: 'Vault ID and Organization ID are required' 
       }, { status: 400 });
     }
 
-    // Verify user is member of this org OR is the org owner
     const membership = await prisma.membership.findFirst({
       where: {
         user_id: user.id,
@@ -29,18 +26,12 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Check if user is org owner (for admin accounts)
     const org = await prisma.org.findUnique({
-      where: { id: orgId }
+      where: { id: orgId },
+      select: { owner_user_id: true }
     });
 
     const isOrgOwner = org?.owner_user_id === user.id;
-
-    console.log('👤 Access check:', { 
-      hasMembership: !!membership, 
-      isOrgOwner,
-      role: membership?.role || (isOrgOwner ? 'owner' : null)
-    });
 
     if (!membership && !isOrgOwner) {
       return NextResponse.json({ 
@@ -48,7 +39,6 @@ export async function GET(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Get the vault with its OrgVaultKey
     const vault = await prisma.vault.findFirst({
       where: { 
         id: vaultId,
@@ -56,11 +46,13 @@ export async function GET(req: NextRequest) {
         type: 'org'
       },
       include: {
-        OrgVaultKey: true
+        orgVaultKey: {
+          select: {
+            ovk_cipher: true
+          }
+        }
       }
     });
-
-    console.log('🗄️ Vault check:', vault ? `Found (${vault.id})` : 'Not found');
 
     if (!vault) {
       return NextResponse.json({ 
@@ -68,34 +60,33 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Get OVK
     let ovkWrappedForUser: string | null = null;
+    let wrapType: 'aes' | 'rsa' = 'rsa';
 
-    if (isOrgOwner && vault.OrgVaultKey?.ovk_cipher) {
-      // For org owner, use the OrgVaultKey's ovk_cipher
-      ovkWrappedForUser = vault.OrgVaultKey.ovk_cipher;
-      console.log('🔑 Using OrgVaultKey ovk_cipher for owner');
-    } else if (membership?.ovk_wrapped_for_user) {
-      // For members, use their wrapped OVK from membership
+    if (membership?.ovk_wrapped_for_user) {
       ovkWrappedForUser = membership.ovk_wrapped_for_user;
-      console.log('🔑 Using membership ovk_wrapped_for_user');
+      wrapType = 'rsa';
+    } else if (isOrgOwner && vault.orgVaultKey?.ovk_cipher) {
+      ovkWrappedForUser = vault.orgVaultKey.ovk_cipher;
+      wrapType = 'aes';
     }
 
     if (!ovkWrappedForUser) {
       return NextResponse.json({ 
-        error: 'OVK not found for user in this organization. Please contact your administrator.' 
+        error: 'OVK not found for user in this organization' 
       }, { status: 404 });
     }
 
-    console.log('✅ Returning OVK for user');
-
     return NextResponse.json({
       ovk_wrapped_for_user: ovkWrappedForUser,
-      org_id: orgId
+      wrap_type: wrapType,
+      org_id: orgId,
+      vault_id: vault.id,
+      vault_name: vault.name
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Org vault API error:', error);
+    console.error('Error fetching org vault OVK:', error);
     return NextResponse.json({ 
       error: 'Internal Server Error',
       details: process.env.NODE_ENV === 'development' ? String(error) : undefined

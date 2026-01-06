@@ -24,9 +24,14 @@ export async function GET(
       }
     });
 
-    console.log('👤 Membership check:', membership ? `Valid (${membership.role})` : 'Invalid');
+    const org = await prisma.org.findUnique({
+      where: { id: orgId },
+      select: { owner_user_id: true }
+    });
 
-    if (!membership) {
+    const isOrgOwner = org?.owner_user_id === user.id;
+
+    if (!membership && !isOrgOwner) {
       return NextResponse.json({ 
         message: 'You are not a member of this organization' 
       }, { status: 403 });
@@ -41,11 +46,10 @@ export async function GET(
         id: true,
         name: true,
         type: true,
-        org_id: true
+        org_id: true,
+        ovk_id: true
       }
     });
-
-    console.log('🗄️ Vault check:', vault ? `Found (${vault.id})` : 'Not found');
 
     if (!vault) {
       return NextResponse.json({ 
@@ -53,12 +57,10 @@ export async function GET(
       }, { status: 404 });
     }
 
-    console.log('✅ Returning vault info');
-
     return NextResponse.json({
       vault,
       membership: {
-        role: membership.role
+        role: membership?.role || (isOrgOwner ? 'owner' : null)
       }
     }, { status: 200 });
 

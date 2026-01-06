@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Database, AlertCircle, Loader2 } from 'lucide-react';
 import { Vault, User } from '@/types/vault';
 import { PlanType } from '@/types/billing';
 import { toast } from 'sonner';
@@ -204,7 +204,7 @@ export const VaultLimitsDisplay: React.FC<VaultLimitsDisplayProps> = ({ vault })
           </div>
         )}
 
-        {userPlan === 'free' && (
+        {/* {userPlan === 'free' && (
           <div className="flex items-start gap-3 p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
             <CheckCircle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
             <div>
@@ -214,7 +214,7 @@ export const VaultLimitsDisplay: React.FC<VaultLimitsDisplayProps> = ({ vault })
               </p>
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

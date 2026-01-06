@@ -4,11 +4,11 @@ import React, { useState, useEffect } from "react";
 import {
   CreditCard,
   Check,
-  Zap,
   Loader2,
   DollarSign,
-  TrendingUp,
+  Download,
   Package,
+  ArrowUp,
 } from "lucide-react";
 import { User } from "@/types/vault";
 import { BillingPlan, PlanType } from "@/types/billing";
@@ -17,7 +17,6 @@ import {
   createStripeCheckoutSession,
   getSubscriptionDetails,
   createStripePortalSession,
-  cancelSubscription,
 } from "@/actions/stripe-action";
 
 interface BillingComponentProps {
@@ -31,6 +30,7 @@ interface BillingData {
   amount?: number;
   paymentMethod?: string;
   currency?: string;
+  billingCycle?: string;
 }
 
 export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
@@ -54,6 +54,9 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
       try {
         const data = await getSubscriptionDetails();
         setBillingData(data);
+        if (data.billingCycle) {
+          setBillingCycle(data.billingCycle as "monthly" | "yearly");
+        }
       } catch (error: unknown) {
         console.error("Failed to fetch billing data:", error);
       } finally {
@@ -76,7 +79,6 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
         itemsPerVault: 100,
         storage: "1GB",
         features: [
-          "1 Personal Vault",
           "100 Items",
           "Basic Security",
           "Web Access",
@@ -93,7 +95,6 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
         itemsPerVault: 1000,
         storage: "10GB",
         features: [
-          "5 Personal Vaults",
           "Unlimited Items",
           "Advanced Security",
           "2FA Support",
@@ -109,15 +110,15 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
       price: { monthly: 2499, yearly: 24990 },
       limits: {
         vaults: 999,
-        itemsPerVault: 10000,
-        storage: "Unlimited",
+        itemsPerVault: 1000,
+        storage: "100GB",
         features: [
-          "Unlimited Vaults",
-          "Unlimited Items",
+          "1000 Items",
           "Enterprise Security",
           "Custom Integrations",
           "Dedicated Support",
           "Advanced Audit Logs",
+          "100GB Storage",
         ],
       },
     },
@@ -134,7 +135,6 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
         members: 3,
         storage: "1GB",
         features: [
-          "1 Organization Vault",
           "100 Items",
           "Up to 3 Members",
           "Basic Security",
@@ -152,7 +152,6 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
         members: 50,
         storage: "100GB",
         features: [
-          "10 Organization Vaults",
           "Unlimited Items",
           "Up to 50 Members",
           "Team Management",
@@ -168,15 +167,15 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
       price: { monthly: 8299, yearly: 82990 },
       limits: {
         vaults: 999,
-        itemsPerVault: 10000,
-        members: 999,
-        storage: "Unlimited",
+        itemsPerVault: 1000,
+        members: 100,
+        storage: "500GB",
         features: [
-          "Unlimited Everything",
+          "1000 Items",
+          "Up to 100 Members",
           "Advanced Compliance",
           "SSO Integration",
           "Dedicated Support",
-          "Custom Features",
           "Advanced Audit Logs",
         ],
       },
@@ -191,9 +190,21 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
 
   const currentPlanDetails = getCurrentPlanDetails();
 
+  const canUpgradeToPlan = (planId: PlanType): boolean => {
+    const planHierarchy = ["free", "pro", "enterprise"];
+    const currentIndex = planHierarchy.indexOf(currentPlan);
+    const targetIndex = planHierarchy.indexOf(planId);
+    return targetIndex > currentIndex;
+  };
+
   const handleUpgrade = async (planId: PlanType): Promise<void> => {
     if (planId === "free") {
-      toast.info("Cannot downgrade to free plan from here");
+      toast.info("Cannot downgrade to free plan. Please contact support.");
+      return;
+    }
+
+    if (planId === currentPlan) {
+      toast.info("You're already on this plan");
       return;
     }
 
@@ -208,6 +219,12 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
 
       if (result.error) {
         throw new Error(result.error);
+      }
+
+      if (result.success && result.message) {
+        toast.success(result.message);
+        setTimeout(() => window.location.reload(), 2000);
+        return;
       }
 
       if (result.url) {
@@ -240,29 +257,6 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
         error instanceof Error
           ? error.message
           : "Failed to open billing portal";
-      toast.error(message);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!confirm("Are you sure you want to cancel your subscription?")) {
-      return;
-    }
-
-    try {
-      const result = await cancelSubscription();
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      toast.success("Subscription cancelled successfully");
-      setTimeout(() => window.location.reload(), 2000);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to cancel subscription";
       toast.error(message);
     }
   };
@@ -414,6 +408,8 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
             billingCycle === "yearly"
               ? plan.price.monthly * 12 - plan.price.yearly
               : 0;
+          const isCurrentPlan = currentPlan === plan.id;
+          const isUpgrade = canUpgradeToPlan(plan.id);
 
           return (
             <div
@@ -423,7 +419,7 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
                   ? "border-blue-600/50 shadow-lg shadow-blue-500/10"
                   : "border-gray-700 hover:border-gray-600"
               } ${
-                currentPlan === plan.id
+                isCurrentPlan
                   ? "ring-2 ring-green-600/50 shadow-lg shadow-green-500/10"
                   : ""
               }`}
@@ -436,7 +432,7 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
                 </div>
               )}
 
-              {currentPlan === plan.id && (
+              {isCurrentPlan && (
                 <div className="absolute -top-3 right-4">
                   <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1">
                     <Check size={12} />
@@ -463,7 +459,7 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
                   plan.id !== "free" &&
                   savings > 0 && (
                     <div className="flex items-center justify-center gap-1 text-sm text-green-400 font-medium">
-                      <TrendingUp size={14} />
+                      <Check size={14} />
                       Save ₹{savings}/year
                     </div>
                   )}
@@ -483,14 +479,15 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
               <button
                 onClick={() => handleUpgrade(plan.id)}
                 disabled={
-                  currentPlan === plan.id ||
+                  isCurrentPlan ||
                   loading === plan.id ||
-                  plan.id === "free"
+                  plan.id === "free" ||
+                  !isUpgrade
                 }
                 className={`w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
-                  currentPlan === plan.id
+                  isCurrentPlan
                     ? "bg-green-600/20 text-green-400 cursor-not-allowed border border-green-600/30"
-                    : plan.id === "free"
+                    : plan.id === "free" || !isUpgrade
                     ? "bg-gray-700 text-gray-400 cursor-not-allowed border border-gray-600"
                     : "bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 disabled:bg-gray-700 disabled:cursor-not-allowed disabled:border-gray-600"
                 }`}
@@ -500,18 +497,20 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing...
                   </>
-                ) : currentPlan === plan.id ? (
+                ) : isCurrentPlan ? (
                   <>
                     <Check className="w-4 h-4" />
                     Current Plan
                   </>
                 ) : plan.id === "free" ? (
                   "Contact Support"
-                ) : (
+                ) : isUpgrade ? (
                   <>
-                    <Zap className="w-4 h-4" />
+                    <ArrowUp className="w-4 h-4" />
                     Upgrade Now
                   </>
+                ) : (
+                  "Not Available"
                 )}
               </button>
             </div>
@@ -546,24 +545,13 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
             </thead>
             <tbody className="divide-y divide-gray-700/50">
               <tr className="hover:bg-gray-750">
-                <td className="py-4 px-6 text-gray-300 font-medium">Vaults</td>
-                {plans.map((plan) => (
-                  <td
-                    key={plan.id}
-                    className="text-center py-4 px-6 text-white font-semibold"
-                  >
-                    {plan.limits.vaults === 999 ? "∞" : plan.limits.vaults}
-                  </td>
-                ))}
-              </tr>
-              <tr className="hover:bg-gray-750">
                 <td className="py-4 px-6 text-gray-300 font-medium">Items</td>
                 {plans.map((plan) => (
                   <td
                     key={plan.id}
                     className="text-center py-4 px-6 text-white font-semibold"
                   >
-                    {plan.limits.itemsPerVault >= 1000
+                    {plan.limits.itemsPerVault >= 2000
                       ? "∞"
                       : plan.limits.itemsPerVault}
                   </td>
@@ -579,9 +567,7 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
                       key={plan.id}
                       className="text-center py-4 px-6 text-white font-semibold"
                     >
-                      {plan.limits.members === 999
-                        ? "∞"
-                        : plan.limits.members || "-"}
+                      {plan.limits.members || "-"}
                     </td>
                   ))}
                 </tr>
@@ -606,29 +592,24 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
         <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-700 bg-gray-800/50">
             <h3 className="text-lg font-semibold text-white">
-              Billing Actions
+              Billing Management
             </h3>
             <p className="text-gray-500 text-xs mt-0.5">
-              Manage your subscription settings
+              Manage payment methods and download invoices
             </p>
           </div>
 
           <div className="p-6">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                className="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 border border-gray-600"
-                onClick={handleManageBilling}
-              >
-                <CreditCard className="w-4 h-4" />
-                Manage Billing
-              </button>
-              <button
-                className="px-5 py-2.5 bg-red-900/20 hover:bg-red-900/30 text-red-300 rounded-lg transition-colors text-sm font-medium border border-red-700/30"
-                onClick={handleCancelSubscription}
-              >
-                Cancel Subscription
-              </button>
-            </div>
+            <button
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 border border-blue-600"
+              onClick={handleManageBilling}
+            >
+              <Download className="w-4 h-4" />
+              Download Invoice
+            </button>
+            <p className="text-gray-400 text-xs mt-3">
+              Access the Stripe billing portal to update payment methods, view invoices, and manage your subscription.
+            </p>
           </div>
         </div>
       )}

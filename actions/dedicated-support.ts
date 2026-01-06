@@ -1,9 +1,27 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { prisma } from "@/db/index";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
+
+interface TicketMetadata {
+  organization_id: string;
+  priority: "normal" | "high" | "critical";
+  subject: string;
+  message: string;
+  contact_phone?: string;
+  plan_type: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  sla: string;
+}
+
+interface TicketUpdateMetadata {
+  ticket_id: string;
+  old_status: string;
+  new_status: string;
+  organization_id: string;
+}
 
 export async function createEnterpriseSupportTicket(formData: {
   organization_id: string;
@@ -44,26 +62,31 @@ export async function createEnterpriseSupportTicket(formData: {
       };
     }
 
+    const slaValue =
+      formData.priority === "critical"
+        ? "1_hour"
+        : formData.priority === "high"
+        ? "4_hours"
+        : "24_hours";
+
+    const ticketMetadata: TicketMetadata = {
+      organization_id: formData.organization_id,
+      priority: formData.priority,
+      subject: formData.subject,
+      message: formData.message,
+      contact_phone: formData.contact_phone,
+      plan_type: organization.plan_type,
+      status: "open",
+      sla: slaValue,
+    };
+
     const ticket = await prisma.logs.create({
       data: {
         user_id: session.user.id,
         action: "enterprise_support_ticket_created",
         subject_type: "support",
-        meta: {
-          organization_id: formData.organization_id,
-          priority: formData.priority,
-          subject: formData.subject,
-          message: formData.message,
-          contact_phone: formData.contact_phone,
-          plan_type: organization.plan_type,
-          status: "open",
-          sla:
-            formData.priority === "critical"
-              ? "1_hour"
-              : formData.priority === "high"
-              ? "4_hours"
-              : "24_hours",
-        },
+        // @ts-expect-error Prisma.JsonValue
+        meta: ticketMetadata as Prisma.InputJsonValue,
       },
     });
 
@@ -79,7 +102,7 @@ export async function createEnterpriseSupportTicket(formData: {
           ticket_id: ticket.id,
           priority: formData.priority,
           subject: formData.subject,
-        },
+        } as Prisma.InputJsonValue,
       },
     });
 
@@ -182,16 +205,14 @@ export async function getSupportTickets(
       return { success: false, error: "Not a member of this organization" };
     }
 
-    const where: any = {
-      action: "enterprise_support_ticket_created",
-      meta: {
-        path: ["organization_id"],
-        equals: organizationId,
-      },
-    };
-
     const tickets = await prisma.logs.findMany({
-      where,
+      where: {
+        action: "enterprise_support_ticket_created",
+        meta: {
+          path: ["organization_id"],
+          equals: organizationId,
+        },
+      },
       orderBy: { ts: "desc" },
       take: 50,
     });
@@ -199,27 +220,29 @@ export async function getSupportTickets(
     let filteredTickets = tickets;
 
     if (filters?.status) {
-      filteredTickets = filteredTickets.filter(
-        (t) => (t.meta as any).status === filters.status
-      );
+      filteredTickets = filteredTickets.filter((t) => {
+        const meta = t.meta as Prisma.JsonObject;
+        return meta.status === filters.status;
+      });
     }
 
     if (filters?.priority) {
-      filteredTickets = filteredTickets.filter(
-        (t) => (t.meta as any).priority === filters.priority
-      );
+      filteredTickets = filteredTickets.filter((t) => {
+        const meta = t.meta as Prisma.JsonObject;
+        return meta.priority === filters.priority;
+      });
     }
 
     const ticketsWithDetails = filteredTickets.map((ticket) => {
-      const meta = ticket.meta as any;
+      const meta = ticket.meta as Prisma.JsonObject;
       return {
         id: ticket.id,
-        subject: meta.subject,
-        priority: meta.priority,
-        status: meta.status,
+        subject: meta.subject as string,
+        priority: meta.priority as string,
+        status: meta.status as string,
         created_at: ticket.ts,
-        sla: meta.sla,
-        contact_phone: meta.contact_phone,
+        sla: meta.sla as string,
+        contact_phone: meta.contact_phone as string | undefined,
       };
     });
 
@@ -251,19 +274,22 @@ export async function updateTicketStatus(
       return { success: false, error: "Ticket not found" };
     }
 
-    const meta = ticket.meta as any;
+    const meta = ticket.meta as Prisma.JsonObject;
+
+    const updateMetadata: TicketUpdateMetadata = {
+      ticket_id: ticketId,
+      old_status: meta.status as string,
+      new_status: status,
+      organization_id: meta.organization_id as string,
+    };
 
     await prisma.logs.create({
       data: {
         user_id: session.user.id,
         action: "support_ticket_updated",
         subject_type: "support",
-        meta: {
-          ticket_id: ticketId,
-          old_status: meta.status,
-          new_status: status,
-          organization_id: meta.organization_id,
-        },
+        // @ts-expect-error Prisma.JsonValue
+        meta: updateMetadata as Prisma.InputJsonValue,
       },
     });
 

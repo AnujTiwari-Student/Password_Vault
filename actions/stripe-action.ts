@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/db";
 import { stripe, STRIPE_CONFIG } from "@/lib/stripe-client";
+import { Prisma } from "@prisma/client";
 
 interface CreateCheckoutSessionParams {
   planId: "free" | "pro" | "enterprise";
@@ -14,6 +15,8 @@ interface CreateCheckoutSessionParams {
 interface CheckoutSessionResult {
   url?: string;
   error?: string;
+  success?: boolean;
+  message?: string;
 }
 
 const PRICING = {
@@ -43,6 +46,23 @@ export async function createStripeCheckoutSession(
 
     if (planId === "free") {
       return { error: "Cannot create checkout session for free plan" };
+    }
+
+    const existingSubscription = await prisma.subscription.findFirst({
+      where: {
+        vault_id: vaultId,
+        status: "active",
+      },
+    });
+
+    if (existingSubscription) {
+      return await upgradeExistingSubscription({
+        existingSubscription,
+        newPlanId: planId,
+        newBillingCycle: billingCycle,
+        vaultType,
+        userId: session.user.id,
+      });
     }
 
     const vaultPricing = vaultType === "org" ? PRICING.org : PRICING.personal;
@@ -130,6 +150,130 @@ export async function createStripeCheckoutSession(
         error instanceof Error
           ? error.message
           : "Failed to create checkout session",
+    };
+  }
+}
+
+async function upgradeExistingSubscription(params: {
+  existingSubscription: {
+    id: string;
+    vault_id: string;
+    user_id: string;
+    plan: string;
+    billing_cycle: string;
+  };
+  newPlanId: string;
+  newBillingCycle: string;
+  vaultType: string;
+  userId: string;
+}): Promise<CheckoutSessionResult> {
+  try {
+    const {
+      existingSubscription,
+      newPlanId,
+      newBillingCycle,
+      vaultType,
+      userId,
+    } = params;
+
+    const customers = await stripe.customers.list({
+      limit: 100,
+    });
+
+    const customer = customers.data.find(
+      (c) => c.metadata?.userId === userId
+    );
+
+    if (!customer) {
+      return { error: "Customer not found in Stripe" };
+    }
+
+    const stripeSubscriptions = await stripe.subscriptions.list({
+      customer: customer.id,
+      status: "active",
+      limit: 1,
+    });
+
+    if (stripeSubscriptions.data.length === 0) {
+      return { error: "No active Stripe subscription found" };
+    }
+
+    const stripeSubscription = stripeSubscriptions.data[0];
+    const subscriptionItemId = stripeSubscription.items.data[0].id;
+
+    const vaultPricing = vaultType === "org" ? PRICING.org : PRICING.personal;
+    const newPrice =
+      vaultPricing[newPlanId as keyof typeof vaultPricing][
+        newBillingCycle as keyof (typeof vaultPricing)["pro"]
+      ];
+    const amountInPaisa = newPrice * 100;
+
+    const priceObject = await stripe.prices.create({
+      currency: STRIPE_CONFIG.currency,
+      unit_amount: amountInPaisa,
+      recurring: {
+        interval: newBillingCycle === "yearly" ? "year" : "month",
+      },
+      product_data: {
+        name: `${newPlanId.charAt(0).toUpperCase() + newPlanId.slice(1)} Plan`,
+      },
+      metadata: {
+        planId: newPlanId,
+        vaultType: vaultType,
+      },
+    });
+
+    await stripe.subscriptions.update(stripeSubscription.id, {
+      items: [
+        {
+          id: subscriptionItemId,
+          price: priceObject.id,
+        },
+      ],
+      proration_behavior: "create_prorations",
+      metadata: {
+        userId: userId,
+        vaultId: existingSubscription.vault_id,
+        vaultType: vaultType,
+        planId: newPlanId,
+      },
+    });
+
+    await prisma.subscription.update({
+      where: { id: existingSubscription.id },
+      data: {
+        plan: newPlanId,
+        billing_cycle: newBillingCycle,
+        amount: newPrice,
+      },
+    });
+
+    await prisma.audit.create({
+      data: {
+        org_id: existingSubscription.vault_id,
+        actor_user_id: userId,
+        action: "subscription_upgraded",
+        subject_type: "org",
+        subject_id: existingSubscription.vault_id,
+        ts: new Date(),
+        meta: {
+          old_plan: existingSubscription.plan,
+          new_plan: newPlanId,
+          old_billing_cycle: existingSubscription.billing_cycle,
+          new_billing_cycle: newBillingCycle,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      success: true,
+      message: `Successfully upgraded to ${newPlanId} plan!`,
+    };
+  } catch (error) {
+    console.error("Error upgrading subscription:", error);
+    return {
+      error:
+        error instanceof Error ? error.message : "Failed to upgrade subscription",
     };
   }
 }
@@ -240,6 +384,7 @@ export async function getSubscriptionDetails() {
       amount: subscription.amount,
       paymentMethod: subscription.payment_method || "None",
       currency: subscription.currency,
+      billingCycle: subscription.billing_cycle,
     };
   } catch (error) {
     console.error("Error fetching subscription details:", error);
@@ -271,6 +416,28 @@ export async function cancelSubscription() {
 
     if (!subscription) {
       return { success: false, error: "No active subscription found" };
+    }
+
+    const customers = await stripe.customers.list({
+      limit: 100,
+    });
+
+    const customer = customers.data.find(
+      (c) => c.metadata?.userId === session.user.id
+    );
+
+    if (customer) {
+      const stripeSubscriptions = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: "active",
+        limit: 1,
+      });
+
+      if (stripeSubscriptions.data.length > 0) {
+        await stripe.subscriptions.update(stripeSubscriptions.data[0].id, {
+          cancel_at_period_end: true,
+        });
+      }
     }
 
     await prisma.subscription.update({

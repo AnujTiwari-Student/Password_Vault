@@ -3,6 +3,7 @@
 import { prisma } from "@/db/index";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
 interface SecuritySettings {
   require_2fa: boolean;
@@ -65,7 +66,8 @@ export async function updateSecuritySettings(
         ts: new Date(),
         meta: {
           type: "security_settings",
-          settings: settings,
+          // @ts-expect-error Prisma.JsonValue
+          settings: settings as Prisma.InputJsonValue,
         },
       },
     });
@@ -77,7 +79,8 @@ export async function updateSecuritySettings(
         subject_type: "organization",
         meta: {
           organization_id: organizationId,
-          settings: settings,
+          // @ts-expect-error Prisma.JsonValue
+          settings: settings as Prisma.InputJsonValue,
         },
       },
     });
@@ -175,7 +178,7 @@ export async function revokeSession(sessionId: string, organizationId: string) {
           session_id: sessionId,
           organization_id: organizationId,
           revoked_by: session.user.id,
-        },
+        } as Prisma.InputJsonValue,
       },
     });
 
@@ -189,7 +192,7 @@ export async function revokeSession(sessionId: string, organizationId: string) {
         ts: new Date(),
         meta: {
           session_id: sessionId,
-        },
+        } as Prisma.InputJsonValue,
       },
     });
 

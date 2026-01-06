@@ -1,27 +1,45 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { prisma } from "@/db/index";
 import { auth } from "@/lib/auth";
-import { revalidatePath } from "next/cache";
+import { AuditSubjectType, Prisma } from "@prisma/client";
 
-export const TRACKABLE_ACTIONS = [
-  "user_login",
-  "user_logout",
-  "vault_created",
-  "vault_deleted",
-  "vault_shared",
-  "item_created",
-  "item_viewed",
-  "item_updated",
-  "item_deleted",
-  "member_invited",
-  "member_removed",
-  "role_changed",
-  "settings_updated",
-  "export_data",
-  "failed_login_attempt",
-] as const;
+type TrackableAction = 
+  | "user_login"
+  | "user_logout"
+  | "vault_created"
+  | "vault_deleted"
+  | "vault_shared"
+  | "item_created"
+  | "item_viewed"
+  | "item_updated"
+  | "item_deleted"
+  | "member_invited"
+  | "member_removed"
+  | "role_changed"
+  | "settings_updated"
+  | "export_data"
+  | "failed_login_attempt";
+
+export async function getTrackableActions(): Promise<TrackableAction[]> {
+  return [
+    "user_login",
+    "user_logout",
+    "vault_created",
+    "vault_deleted",
+    "vault_shared",
+    "item_created",
+    "item_viewed",
+    "item_updated",
+    "item_deleted",
+    "member_invited",
+    "member_removed",
+    "role_changed",
+    "settings_updated",
+    "export_data",
+    "failed_login_attempt",
+  ];
+}
 
 export async function createAuditLog(
   organizationId: string,
@@ -45,12 +63,12 @@ export async function createAuditLog(
         org_id: organizationId,
         actor_user_id: session.user.id,
         action: action,
-        subject_type: details.resourceType as any,
+        subject_type: details.resourceType as AuditSubjectType,
         subject_id: details.resourceId,
         ip: details.ipAddress,
         ua: details.userAgent,
         ts: new Date(),
-        meta: details.metadata || {},
+        meta: (details.metadata || {}) as Prisma.InputJsonValue,
       },
     });
 
@@ -110,7 +128,17 @@ export async function getAuditLogs(
       };
     }
 
-    const where: any = { org_id: organizationId };
+    interface WhereClause {
+      org_id: string;
+      ts?: {
+        gte?: Date;
+        lte?: Date;
+      };
+      action?: string;
+      actor_user_id?: string;
+    }
+
+    const where: WhereClause = { org_id: organizationId };
 
     if (filters?.from || filters?.to) {
       where.ts = {};
@@ -194,7 +222,15 @@ export async function exportAuditLogs(
       return { success: false, error: "Insufficient permissions" };
     }
 
-    const where: any = { org_id: organizationId };
+    interface WhereClause {
+      org_id: string;
+      ts?: {
+        gte?: Date;
+        lte?: Date;
+      };
+    }
+
+    const where: WhereClause = { org_id: organizationId };
 
     if (filters?.from || filters?.to) {
       where.ts = {};
