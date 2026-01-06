@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     ovk_wrapped_for_org,
     org_name,
     account_type,
-    public_key, 
+    public_key,
     wrapped_private_key,
   } = body;
 
@@ -32,25 +32,23 @@ export async function POST(request: Request) {
     !master_passphrase_verifier ||
     !ovk_wrapped_for_user ||
     !account_type ||
-    !public_key || 
+    !public_key ||
     !wrapped_private_key
   ) {
-    console.warn(
-      "Received incomplete key material for setup:",
-      Object.keys(body)
-    );
     return NextResponse.json(
-      {
-        error: "Missing required client-side generated key materials.",
-      },
+      { error: "Missing required client-side generated key materials." },
       { status: 400 }
     );
   }
 
-  if (account_type === "org" && (!org_name || !ovk_raw || !ovk_wrapped_for_org)) {
+  if (
+    account_type === "org" &&
+    (!org_name || !ovk_raw || !ovk_wrapped_for_org)
+  ) {
     return NextResponse.json(
       {
-        error: "Organization setup requires org_name, ovk_raw, and ovk_wrapped_for_org.",
+        error:
+          "Organization setup requires org_name, ovk_raw, and ovk_wrapped_for_org.",
       },
       { status: 400 }
     );
@@ -58,8 +56,9 @@ export async function POST(request: Request) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      let newOrg;
+      let newOrg = null;
 
+      // 1️⃣ Update user crypto & account info
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: {
@@ -71,19 +70,22 @@ export async function POST(request: Request) {
         select: { id: true, email: true, name: true },
       });
 
+      // 2️⃣ Store wrapped private key securely
       await tx.logs.create({
         data: {
           user_id: userId,
           action: "STORE_PRIVATE_KEY",
           subject_type: "CRYPTO_SETUP",
           meta: {
-            wrapped_private_key: wrapped_private_key,
-            setup_timestamp: new Date().toISOString()
-          }
-        }
+            wrapped_private_key,
+            setup_timestamp: new Date().toISOString(),
+          },
+        },
       });
 
+      // ================= ORG ACCOUNT =================
       if (account_type === "org") {
+        // 3️⃣ Create org
         newOrg = await tx.org.create({
           data: {
             name: org_name,
@@ -91,6 +93,7 @@ export async function POST(request: Request) {
           },
         });
 
+        // 4️⃣ Membership (OWNER)
         await tx.membership.create({
           data: {
             org_id: newOrg.id,
@@ -100,6 +103,7 @@ export async function POST(request: Request) {
           },
         });
 
+        // 5️⃣ Org Vault Key
         const orgVaultKey = await tx.orgVaultKey.create({
           data: {
             org_id: newOrg.id,
@@ -107,6 +111,7 @@ export async function POST(request: Request) {
           },
         });
 
+        // 6️⃣ ORG Vault (🔥 FIXED HERE 🔥)
         const vault = await tx.vault.create({
           data: {
             org_id: newOrg.id,
@@ -114,9 +119,11 @@ export async function POST(request: Request) {
             type: "org",
             ovk_id: orgVaultKey.id,
             orgVaultKeyId: orgVaultKey.id,
+            created_by: userId, // ✅ REQUIRED FIX
           },
         });
 
+        // 7️⃣ Audit log
         await tx.audit.create({
           data: {
             org_id: newOrg.id,
@@ -133,7 +140,11 @@ export async function POST(request: Request) {
             },
           },
         });
-      } else if (account_type === "personal") {
+      }
+
+      // ================= PERSONAL ACCOUNT =================
+      else if (account_type === "personal") {
+        // 8️⃣ Personal vault key
         const personalVaultKey = await tx.personalVaultKey.create({
           data: {
             user_id: userId,
@@ -141,6 +152,7 @@ export async function POST(request: Request) {
           },
         });
 
+        // 9️⃣ Personal vault (🔥 FIXED HERE 🔥)
         const vault = await tx.vault.create({
           data: {
             name: "Personal Vault",
@@ -148,6 +160,7 @@ export async function POST(request: Request) {
             user_id: userId,
             ovk_id: personalVaultKey.id,
             personalVaultKeyId: personalVaultKey.id,
+            created_by: userId, // ✅ REQUIRED FIX
           },
         });
 
@@ -155,9 +168,9 @@ export async function POST(request: Request) {
           data: {
             user_id: userId,
             action: "PERSONAL_SETUP",
+            subject_type: "PERSONAL_VAULT_SETUP",
             ip: request.headers.get("x-forwarded-for") || "unknown",
             ua: request.headers.get("user-agent") || "unknown",
-            subject_type: "PERSONAL_VAULT_SETUP",
             meta: {
               ownerEmail: updatedUser.email,
               vaultName: vault.name,
@@ -171,8 +184,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        message: "Setup complete: Master Passphrase, User, Org, and Membership created.",
-        result,
+        message:
+          "Setup complete: Master Passphrase, User, Vault, and Org created successfully.",
         orgId: result[1]?.id || null,
       },
       { status: 200 }
@@ -180,9 +193,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Critical setup transaction failed:", error);
     return NextResponse.json(
-      {
-        error: "Server error during critical setup. Setup failed.",
-      },
+      { error: "Server error during critical setup. Setup failed." },
       { status: 500 }
     );
   }

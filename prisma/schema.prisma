@@ -139,7 +139,7 @@ model Org {
   max_members         Int                @default(3)
   features            String[]
   plan_start_date     DateTime           @default(now())
-  plan_renewal_date   DateTime
+  plan_renewal_date   DateTime?
   billing_cycle       BillingCycle       @default(monthly)
   created_at          DateTime           @default(now())
   owner               User               @relation("OrgOwner", fields: [owner_user_id], references: [id])
