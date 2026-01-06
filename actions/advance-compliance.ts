@@ -70,7 +70,8 @@ export async function createAuditLog(
         ip: details.ipAddress,
         ua: details.userAgent,
         ts: new Date(),
-        meta: (details.metadata || {}) as Prisma.InputJsonValue,
+        // @ts-expect-error Prisma.JsonObject type issue
+        meta: details.metadata,
       },
     });
 

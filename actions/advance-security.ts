@@ -64,10 +64,10 @@ export async function updateSecuritySettings(
         subject_type: "org",
         subject_id: organizationId,
         ts: new Date(),
+        // @ts-expect-error Prisma.JsonObject type issue
         meta: {
           type: "security_settings",
-          // @ts-expect-error Prisma.JsonValue
-          settings: settings as Prisma.InputJsonValue,
+          settings: settings,
         },
       },
     });
@@ -77,10 +77,10 @@ export async function updateSecuritySettings(
         user_id: session.user.id,
         action: "security_settings_updated",
         subject_type: "organization",
+        // @ts-expect-error Prisma.JsonObject type issue
         meta: {
           organization_id: organizationId,
-          // @ts-expect-error Prisma.JsonValue
-          settings: settings as Prisma.InputJsonValue,
+          settings: settings,
         },
       },
     });
