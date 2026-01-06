@@ -2,7 +2,7 @@
 
 import { prisma } from "@/db/index";
 import { auth } from "@/lib/auth";
-import { Prisma } from "@prisma/client";
+import { AuditSubjectType, Prisma } from "@prisma/client";
 
 type TrackableAction = 
   | "user_login"
@@ -63,8 +63,7 @@ export async function createAuditLog(
         org_id: organizationId,
         actor_user_id: session.user.id,
         action: action,
-        // @ts-expect-error Prisma.JsonValue
-        subject_type: details.resourceType,
+        subject_type: details.resourceType as AuditSubjectType,
         subject_id: details.resourceId,
         ip: details.ipAddress,
         ua: details.userAgent,
