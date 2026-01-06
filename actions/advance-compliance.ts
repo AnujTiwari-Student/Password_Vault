@@ -2,7 +2,9 @@
 
 import { prisma } from "@/db/index";
 import { auth } from "@/lib/auth";
-import { AuditSubjectType, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+
+type AuditSubjectType = "vault" | "org" | "member" | "item" | "invite"
 
 type TrackableAction = 
   | "user_login"
