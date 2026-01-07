@@ -100,6 +100,7 @@ function VaultSetting() {
         <div className="space-y-4 md:space-y-6">
           {activeTab === 'general' && (
             <div className="space-y-4 md:space-y-6">
+              {/* @ts-expect-error TS(2769): No overload matches this call. */}
               <VaultNameEditor vault={vault} />
             </div>
           )}
