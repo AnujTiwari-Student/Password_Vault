@@ -13,10 +13,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Mail } from "lucide-react"
+import { Mail, Loader2 } from "lucide-react"
 
 export default function ResetRequestPage() {
-  const [state, formAction] = useFormState(sendOtp, undefined)
+  const [state, formAction, isPending] = useFormState(sendOtp, undefined)
 
   return (
     <div className="min-h-screen bg-[#191919] flex items-center justify-center p-4">
@@ -38,28 +38,49 @@ export default function ResetRequestPage() {
               <p className="text-red-300 text-sm">{state.error}</p>
             </div>
           )}
+
+          {/* ✅ FIXED: Proper form with action={formAction} */}
           <form action={formAction} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-white">Email</Label>
+              <Label htmlFor="email" className="text-[#bfbfbf]">
+                Email
+              </Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 placeholder="your@email.com"
-                className="bg-gray-750 border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500/50"
+                className="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500/50 h-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isPending}
                 required
               />
             </div>
             <Button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 border-none text-white font-medium h-11 rounded-xl shadow-lg hover:shadow-xl transition-all"
+              type="submit"  
+              size="lg"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 border-none text-white font-medium h-12 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:from-gray-700 disabled:to-gray-800 disabled:shadow-none disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={isPending}
             >
-              Send Verification Code
+              {isPending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Sending Code...
+                </span>
+              ) : (
+                'Send Verification Code'
+              )}
             </Button>
           </form>
+
           <div className="text-center pt-6 border-t border-gray-700/50">
             <p className="text-sm text-gray-400">
-              Back to <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 font-medium">Sign in</Link>
+              Back to{' '}
+              <Link 
+                href="/auth/login" 
+                className="text-blue-400 hover:text-blue-300 font-semibold hover:underline transition-colors"
+              >
+                Sign in
+              </Link>
             </p>
           </div>
         </CardContent>

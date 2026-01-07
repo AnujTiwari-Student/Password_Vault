@@ -12,17 +12,19 @@ const sendOtpSchema = z.object({
   email: z.string().email()
 })
 
-export async function sendOtp(prevState: { error?: string } | undefined, formData: FormData) {
+export async function sendOtp(prevState: { error?: string; pending?: boolean } | undefined, formData: FormData) {
+  let email = ""
+  
   try {
     const validatedFields = sendOtpSchema.safeParse({
       email: formData.get('email')
     })
 
     if (!validatedFields.success) {
-      return { error: "Invalid email address" }
+      return { error: "Invalid email address", pending: false }
     }
 
-    const { email } = validatedFields.data
+    email = validatedFields.data.email
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     const expiresAt = Date.now() + 10 * 60 * 1000
 
@@ -30,7 +32,7 @@ export async function sendOtp(prevState: { error?: string } | undefined, formDat
       where: { email }
     })
 
-    await redis.set(`otp:${email}`, JSON.stringify({ otp, expiresAt }), { ex: 600 })
+    await redis.set(`otp:${email}`, { otp, expiresAt }, { ex: 600 })
     await redis.set(`reset:email:${otp}`, email, { ex: 600 })
 
     await sendEmail(email, "Your Password Reset OTP", emailTemplates.verification({
@@ -50,10 +52,30 @@ export async function sendOtp(prevState: { error?: string } | undefined, formDat
 
     const cookieStore = await cookies()
     cookieStore.set('reset-email', email, { maxAge: 600 })
-    redirect('/auth/reset/verify')
+    
+    if (user) {
+      await prisma.logs.create({
+        data: {
+          user_id: user.id,
+          action: "PASSWORD_RESET_REQUESTED",
+          subject_type: "password",
+          ip: cookieStore.get('client-ip')?.value || null,
+          ua: cookieStore.get('user-agent')?.value || null,
+          meta: {
+            method: "email_otp",
+            otp_length: 6,
+            otp_expires_in_minutes: 10
+          }
+        }
+      })
+    }
 
+    console.log(`✅ OTP sent to: ${email}`)
+    
   } catch (error) {
-    console.error("Error in sendOtp action:", error)
-    return { error: "Failed to send OTP" }
+    console.error('❌ Send OTP error:', error)
+    return { error: "Failed to send OTP", pending: false }
   }
+
+  redirect('/auth/reset/verify')
 }
