@@ -145,9 +145,8 @@ export default function BillingSuccessPage() {
       if (timeoutId) clearTimeout(timeoutId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // ✅ Empty deps = runs ONCE, no ESLint warnings on Vercel
+  }, []); 
 
-  // Rest of JSX unchanged...
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <div className="bg-gray-800 rounded-xl border border-gray-700 p-8 max-w-md w-full">

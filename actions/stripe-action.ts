@@ -456,6 +456,8 @@ export async function cancelSubscription() {
   }
 }
 
+type PlanType = 'basic' | 'professional' | 'enterprise';
+
 export async function handleCheckoutCompleted(session: {
   id: string;
   customer: string;
@@ -481,10 +483,17 @@ export async function handleCheckoutCompleted(session: {
       ? session.subscription
       : (session.subscription as Stripe.Subscription).id;
 
-    // Retry mechanism for retrieving subscription with period timestamps
     let stripeSubscription: Stripe.Subscription | null = null;
     let retryCount = 0;
     const maxRetries = 5;
+
+    const planTypeMap: Record<string, PlanType> = {
+      'pro': 'professional',
+      'enterprise': 'enterprise',
+      'basic': 'basic'
+    };
+
+    const userPlanType = planTypeMap[planId as keyof typeof planTypeMap];
     
     while (retryCount < maxRetries) {
       stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -518,12 +527,10 @@ export async function handleCheckoutCompleted(session: {
       // @ts-expect-error TS(2345): Argument of type 'number | null' is not assignable to parameter of type 'number'.
       currentPeriodStart = new Date(stripeSubscription.current_period_start * 1000);
       
-      // Validate the dates
       if (isNaN(currentPeriodEnd.getTime()) || isNaN(currentPeriodStart.getTime())) {
         throw new Error('Invalid date values from Stripe subscription');
       }
     } else {
-      // Fallback: calculate period dates based on billing cycle
       console.log('⚠️ Using fallback date calculation');
       currentPeriodStart = new Date();
       currentPeriodEnd = new Date();
@@ -575,7 +582,14 @@ export async function handleCheckoutCompleted(session: {
         },
       });
 
-      console.log(`✅ Updated existing subscription: ${existing.id}`);
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          plan_type: userPlanType,
+        },
+      });
+      
+      console.log(`✅ Updated existing subscription AND user plan_type to ${userPlanType}: ${existing.id}`);
     } else {
       await prisma.subscription.create({
         data: {
@@ -597,7 +611,15 @@ export async function handleCheckoutCompleted(session: {
         },
       });
 
-      console.log(`✅ Created new subscription for vault: ${vaultId}`);
+      // ✅ NEW: Update USER plan_type for NEW subscription
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          plan_type: userPlanType,
+        },
+      });
+      
+      console.log(`✅ Created new subscription AND set user plan_type to ${userPlanType}: ${vaultId}`);
     }
 
     return { success: true };
@@ -606,7 +628,6 @@ export async function handleCheckoutCompleted(session: {
     throw error;
   }
 }
-
 
 export async function handleSubscriptionUpdated(subscription: {
   id: string;
