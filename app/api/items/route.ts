@@ -2,7 +2,15 @@ import { prisma } from '@/db';
 import { currentUser } from '@/lib/current-user';
 import { NextRequest, NextResponse } from 'next/server';
 
-// GET - Fetch items from a vault
+type PlanType = 'basic' | 'professional' | 'enterprise' | 'free';
+
+const PLAN_LIMITS: Record<PlanType, number> = {
+  'free': 100,
+  'basic': 100,
+  'professional': 500,
+  'enterprise': 1000
+};
+
 export async function GET(req: NextRequest) {
   try {
     const user = await currentUser();
@@ -19,7 +27,6 @@ export async function GET(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if user owns this vault
     const vault = await prisma.vault.findUnique({
       where: { id: vaultId },
       select: {
@@ -40,7 +47,6 @@ export async function GET(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Fetch items
     const items = await prisma.item.findMany({
       where: { vault_id: vaultId },
       orderBy: { updated_at: 'desc' }
@@ -57,7 +63,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Create a new item
 export async function POST(req: NextRequest) {
   try {
     const user = await currentUser();
@@ -82,7 +87,6 @@ export async function POST(req: NextRequest) {
       created_by
     } = body;
 
-    // Validate required fields
     if (!vaultId || !item_name || !type || !Array.isArray(type) || type.length === 0) {
       return NextResponse.json({ 
         message: 'Missing required fields: vaultId, item_name, type' 
@@ -95,7 +99,6 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Verify vault exists and user has access
     const vault = await prisma.vault.findUnique({
       where: { id: vaultId },
       select: {
@@ -112,7 +115,6 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check permissions
     if (vault.type === 'personal') {
       if (vault.user_id !== user.id) {
         return NextResponse.json({ 
@@ -120,7 +122,6 @@ export async function POST(req: NextRequest) {
         }, { status: 403 });
       }
     } else if (vault.type === 'org') {
-      // Check if user is member of this org
       const membership = await prisma.membership.findFirst({
         where: {
           user_id: user.id,
@@ -134,7 +135,6 @@ export async function POST(req: NextRequest) {
         }, { status: 403 });
       }
 
-      // Check if user has permission to create items (editor or owner)
       if (membership.role === 'viewer') {
         return NextResponse.json({ 
           message: 'Access denied: Viewers cannot create items' 
@@ -142,7 +142,32 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create the item
+    const userWithPlan = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { 
+        plan_type: true,
+        vault: {
+          where: { id: vaultId },
+          select: { 
+            items: { 
+              where: { deleted_at: null },
+              select: { id: true }
+            }
+          }
+        }
+      }
+    });
+
+    // @ts-expect-error: plan_type exists
+    const currentItemsCount = userWithPlan?.vault?.[0]?.items.length || 0;
+    const planLimit = PLAN_LIMITS[userWithPlan?.plan_type as PlanType] || 0;
+
+    if (currentItemsCount >= planLimit && planLimit !== 1000) {
+      return NextResponse.json({ 
+        message: `Plan limit exceeded (${currentItemsCount}/${planLimit}). Upgrade to ${userWithPlan?.plan_type === 'basic' ? 'Professional' : 'Enterprise'} plan.` 
+      }, { status: 402 });
+    }
+
     const newItem = await prisma.item.create({
       data: {
         vault_id: vaultId,
@@ -176,7 +201,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PUT - Update an item
 export async function PUT(req: NextRequest) {
   try {
     const user = await currentUser();
@@ -203,7 +227,6 @@ export async function PUT(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get item with vault info
     const item = await prisma.item.findUnique({
       where: { id: itemId },
       include: {
@@ -223,7 +246,6 @@ export async function PUT(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check permissions
     if (item.vault.type === 'personal') {
       if (item.vault.user_id !== user.id) {
         return NextResponse.json({ 
@@ -245,7 +267,6 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    // Update item
     const updatedItem = await prisma.item.update({
       where: { id: itemId },
       data: {
@@ -275,7 +296,6 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// DELETE - Delete an item
 export async function DELETE(req: NextRequest) {
   try {
     const user = await currentUser();
@@ -292,7 +312,6 @@ export async function DELETE(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get item with vault info
     const item = await prisma.item.findUnique({
       where: { id: itemId },
       include: {
@@ -312,7 +331,6 @@ export async function DELETE(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check permissions
     if (item.vault.type === 'personal') {
       if (item.vault.user_id !== user.id) {
         return NextResponse.json({ 
@@ -334,7 +352,6 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    // Delete item
     await prisma.item.delete({
       where: { id: itemId }
     });

@@ -3,6 +3,16 @@ import { currentUser } from '@/lib/current-user';
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 
+type PlanType = 'basic' | 'professional' | 'enterprise' | 'free';
+const PLAN_LIMITS: Record<PlanType, number> = {
+  'free': 100,
+  'basic': 100,
+  'professional': 500,
+  'enterprise': 1000
+};
+
+console.log('🔐 [/api/items/member-items] Module loaded', PLAN_LIMITS);
+
 type ItemType = 'login' | 'note' | 'totp';
 
 export async function GET(req: NextRequest) {
@@ -26,7 +36,6 @@ export async function GET(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if user is member of this organization
     const membership = await prisma.membership.findFirst({
       where: {
         user_id: user.id,
@@ -34,7 +43,6 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Check if user is org owner
     const org = await prisma.org.findUnique({
       where: { id: orgId },
       select: {
@@ -57,7 +65,6 @@ export async function GET(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Verify the vault exists and belongs to this org
     const vault = await prisma.vault.findFirst({
       where: { 
         id: vaultId,
@@ -74,7 +81,6 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Build query filters
     const searchQuery = searchParams.get('q');
     const typeFilter = searchParams.get('type');
     const tagFilter = searchParams.get('tag');
@@ -111,7 +117,6 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    // Fetch items
     const items = await prisma.item.findMany({ 
       where: whereClause,
       select: { 
