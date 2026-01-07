@@ -1,8 +1,17 @@
 "use client";
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import React, { useState, useEffect, useCallback } from 'react';
-import { Filter, X, RefreshCw, Shield, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Filter, X, RefreshCw, Shield, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AuditLog {
   id: string;
@@ -21,11 +30,14 @@ interface FilterState {
   date: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export const AuditLogsTable: React.FC = () => {
   const user = useCurrentUser();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<FilterState>({
     action: '',
     subject_type: '',
@@ -135,6 +147,7 @@ export const AuditLogsTable: React.FC = () => {
         }));
         
         setLogs(transformedLogs);
+        setCurrentPage(1);
       } else {
         throw new Error(result.error || result.message || 'Failed to fetch logs');
       }
@@ -171,6 +184,24 @@ export const AuditLogsTable: React.FC = () => {
       subject_type: '',
       date: '',
     });
+  }, []);
+
+  // Pagination logic
+  const totalPages = Math.ceil(logs.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedLogs = useMemo(() => logs.slice(startIndex, endIndex), [logs, startIndex, endIndex]);
+
+  const goToPage = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+
+  const goToNextPage = useCallback(() => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  }, [totalPages]);
+
+  const goToPrevPage = useCallback(() => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
   }, []);
 
   useEffect(() => {
@@ -227,103 +258,119 @@ export const AuditLogsTable: React.FC = () => {
         
         <div className="p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-            <select 
+            <Select 
               value={filters.action}
-              onChange={(e) => handleFilterChange('action', e.target.value)}
-              className="px-3 md:px-4 py-2 bg-gray-750 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 hover:border-gray-600 transition-colors"
+              onValueChange={(value) => handleFilterChange('action', value)}
             >
-              <option value="">All Actions</option>
-              {isOrgAccount ? (
-                <>
-                  <optgroup label="Organization Management">
-                    <option value="ORG_CREATED">Organization Created</option>
-                    <option value="ORG_VIEWED">Organization Viewed</option>
-                    <option value="ORG_UPDATED">Organization Updated</option>
-                    <option value="ORG_DELETED">Organization Deleted</option>
-                  </optgroup>
-                  <optgroup label="Member Management">
-                    <option value="MEMBER_ADDED">Member Added</option>
-                    <option value="MEMBER_INVITED">Member Invited</option>
-                    <option value="MEMBER_REMOVED">Member Removed</option>
-                    <option value="MEMBER_ROLE_CHANGED">Member Role Changed</option>
-                  </optgroup>
-                  <optgroup label="Vault & Security">
-                    <option value="VAULT_CREATED">Vault Created</option>
-                    <option value="VAULT_ACCESSED">Vault Accessed</option>
-                    <option value="VAULT_SHARED">Vault Shared</option>
-                    <option value="UMK_SETUP">UMK Setup</option>
-                    <option value="OVK_SETUP">OVK Setup</option>
-                  </optgroup>
-                  <optgroup label="Items">
-                    <option value="ITEM_CREATED">Item Created</option>
-                    <option value="ITEM_VIEWED">Item Viewed</option>
-                    <option value="ITEM_DELETED">Item Deleted</option>
-                    <option value="ITEM_SHARED">Item Shared</option>
-                  </optgroup>
-                  <optgroup label="Invitations">
-                    <option value="INVITE_SENT">Invite Sent</option>
-                    <option value="INVITE_ACCEPTED">Invite Accepted</option>
-                    <option value="INVITE_REVOKED">Invite Revoked</option>
-                  </optgroup>
-                  <optgroup label="Security">
-                    <option value="LOGIN_FAILED">Login Failed</option>
-                    <option value="PASSWORD_CHANGED">Password Changed</option>
-                    <option value="PERMISSION_CHANGED">Permission Changed</option>
-                    <option value="SUSPICIOUS_ACTIVITY">Suspicious Activity</option>
-                  </optgroup>
-                </>
-              ) : (
-                <>
-                  <optgroup label="Personal Setup">
-                    <option value="PERSONAL_SETUP">Personal Setup</option>
-                    <option value="STORE_PRIVATE_KEY">Store Private Key</option>
-                  </optgroup>
-                  <optgroup label="Items">
-                    <option value="ITEM_CREATED">Item Created</option>
-                    <option value="ITEM_VIEWED">Item Viewed</option>
-                    <option value="ITEM_DELETED">Item Deleted</option>
-                    <option value="ITEM_SHARED">Item Shared</option>
-                  </optgroup>
-                  <optgroup label="Vault">
-                    <option value="VAULT_ACCESSED">Vault Accessed</option>
-                    <option value="VAULT_CREATED">Vault Created</option>
-                  </optgroup>
-                  <optgroup label="Security">
-                    <option value="LOGIN_FAILED">Login Failed</option>
-                    <option value="PASSWORD_CHANGED">Password Changed</option>
-                    <option value="EMAIL_CHANGED">Email Changed</option>
-                  </optgroup>
-                </>
-              )}
-            </select>
+              <SelectTrigger className="bg-gray-750 border-gray-700 text-white hover:border-gray-600 w-full">
+                <SelectValue placeholder="All Actions" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                {isOrgAccount ? (
+                  <>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Organization Management</SelectLabel>
+                      <SelectItem value="ORG_CREATED" className="text-white">Organization Created</SelectItem>
+                      <SelectItem value="ORG_VIEWED" className="text-white">Organization Viewed</SelectItem>
+                      <SelectItem value="ORG_UPDATED" className="text-white">Organization Updated</SelectItem>
+                      <SelectItem value="ORG_DELETED" className="text-white">Organization Deleted</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Member Management</SelectLabel>
+                      <SelectItem value="MEMBER_ADDED" className="text-white">Member Added</SelectItem>
+                      <SelectItem value="MEMBER_INVITED" className="text-white">Member Invited</SelectItem>
+                      <SelectItem value="MEMBER_REMOVED" className="text-white">Member Removed</SelectItem>
+                      <SelectItem value="MEMBER_ROLE_CHANGED" className="text-white">Member Role Changed</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Vault & Security</SelectLabel>
+                      <SelectItem value="VAULT_CREATED" className="text-white">Vault Created</SelectItem>
+                      <SelectItem value="VAULT_ACCESSED" className="text-white">Vault Accessed</SelectItem>
+                      <SelectItem value="VAULT_SHARED" className="text-white">Vault Shared</SelectItem>
+                      <SelectItem value="UMK_SETUP" className="text-white">UMK Setup</SelectItem>
+                      <SelectItem value="OVK_SETUP" className="text-white">OVK Setup</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Items</SelectLabel>
+                      <SelectItem value="ITEM_CREATED" className="text-white">Item Created</SelectItem>
+                      <SelectItem value="ITEM_VIEWED" className="text-white">Item Viewed</SelectItem>
+                      <SelectItem value="ITEM_DELETED" className="text-white">Item Deleted</SelectItem>
+                      <SelectItem value="ITEM_SHARED" className="text-white">Item Shared</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Invitations</SelectLabel>
+                      <SelectItem value="INVITE_SENT" className="text-white">Invite Sent</SelectItem>
+                      <SelectItem value="INVITE_ACCEPTED" className="text-white">Invite Accepted</SelectItem>
+                      <SelectItem value="INVITE_REVOKED" className="text-white">Invite Revoked</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Security</SelectLabel>
+                      <SelectItem value="LOGIN_FAILED" className="text-white">Login Failed</SelectItem>
+                      <SelectItem value="PASSWORD_CHANGED" className="text-white">Password Changed</SelectItem>
+                      <SelectItem value="PERMISSION_CHANGED" className="text-white">Permission Changed</SelectItem>
+                      <SelectItem value="SUSPICIOUS_ACTIVITY" className="text-white">Suspicious Activity</SelectItem>
+                    </SelectGroup>
+                  </>
+                ) : (
+                  <>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Personal Setup</SelectLabel>
+                      <SelectItem value="PERSONAL_SETUP" className="text-white">Personal Setup</SelectItem>
+                      <SelectItem value="STORE_PRIVATE_KEY" className="text-white">Store Private Key</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Items</SelectLabel>
+                      <SelectItem value="ITEM_CREATED" className="text-white">Item Created</SelectItem>
+                      <SelectItem value="ITEM_VIEWED" className="text-white">Item Viewed</SelectItem>
+                      <SelectItem value="ITEM_DELETED" className="text-white">Item Deleted</SelectItem>
+                      <SelectItem value="ITEM_SHARED" className="text-white">Item Shared</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Vault</SelectLabel>
+                      <SelectItem value="VAULT_ACCESSED" className="text-white">Vault Accessed</SelectItem>
+                      <SelectItem value="VAULT_CREATED" className="text-white">Vault Created</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-gray-400">Security</SelectLabel>
+                      <SelectItem value="LOGIN_FAILED" className="text-white">Login Failed</SelectItem>
+                      <SelectItem value="PASSWORD_CHANGED" className="text-white">Password Changed</SelectItem>
+                      <SelectItem value="EMAIL_CHANGED" className="text-white">Email Changed</SelectItem>
+                    </SelectGroup>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
 
-            <select 
+            <Select 
               value={filters.subject_type}
-              onChange={(e) => handleFilterChange('subject_type', e.target.value)}
-              className="px-3 md:px-4 py-2 bg-gray-750 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 hover:border-gray-600 transition-colors"
+              onValueChange={(value) => handleFilterChange('subject_type', value)}
             >
-              <option value="">All Types</option>
-              {isOrgAccount ? (
-                <>
-                  <option value="org">Organization</option>
-                  <option value="vault">Vault</option>
-                  <option value="item">Item</option>
-                  <option value="member">Member</option>
-                  <option value="invite">Invite</option>
-                  <option value="permission">Permission</option>
-                  <option value="key">Key Management</option>
-                </>
-              ) : (
-                <>
-                  <option value="PERSONAL_VAULT_SETUP">Personal Vault Setup</option>
-                  <option value="CRYPTO_SETUP">Crypto Setup</option>
-                  <option value="item">Item</option>
-                  <option value="vault">Vault</option>
-                  <option value="user">User</option>
-                  <option value="auth">Authentication</option>
-                </>
-              )}
-            </select>
+              <SelectTrigger className="bg-gray-750 border-gray-700 text-white hover:border-gray-600 w-full">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                {isOrgAccount ? (
+                  <>
+                    <SelectItem value="org" className="text-white">Organization</SelectItem>
+                    <SelectItem value="vault" className="text-white">Vault</SelectItem>
+                    <SelectItem value="item" className="text-white">Item</SelectItem>
+                    <SelectItem value="member" className="text-white">Member</SelectItem>
+                    <SelectItem value="invite" className="text-white">Invite</SelectItem>
+                    <SelectItem value="permission" className="text-white">Permission</SelectItem>
+                    <SelectItem value="key" className="text-white">Key Management</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="PERSONAL_VAULT_SETUP" className="text-white">Personal Vault Setup</SelectItem>
+                    <SelectItem value="CRYPTO_SETUP" className="text-white">Crypto Setup</SelectItem>
+                    <SelectItem value="item" className="text-white">Item</SelectItem>
+                    <SelectItem value="vault" className="text-white">Vault</SelectItem>
+                    <SelectItem value="user" className="text-white">User</SelectItem>
+                    <SelectItem value="auth" className="text-white">Authentication</SelectItem>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
             
             <input
               type="date"
@@ -353,7 +400,6 @@ export const AuditLogsTable: React.FC = () => {
         </div>
       </div>
 
-      {/* Error State */}
       {error && (
         <div className="bg-red-900/20 border border-red-700/50 rounded-xl p-4">
           <div className="flex items-start gap-3">
@@ -394,7 +440,7 @@ export const AuditLogsTable: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log, index) => (
+                  {paginatedLogs.map((log, index) => (
                     <tr 
                       key={log.id} 
                       className={`border-b border-gray-700/50 hover:bg-gray-750 transition-colors ${
@@ -415,11 +461,58 @@ export const AuditLogsTable: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination for Desktop */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-6 py-4 border-t border-gray-700">
+                <div className="text-xs sm:text-sm text-gray-400 text-center sm:text-left">
+                  Showing <span className="font-semibold text-gray-300">{startIndex + 1}</span> to{" "}
+                  <span className="font-semibold text-gray-300">{Math.min(endIndex, logs.length)}</span> of{" "}
+                  <span className="font-semibold text-gray-300">{logs.length}</span> logs
+                </div>
+                
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 1}
+                    className="p-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-700 transition-colors border border-gray-600"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft size={18} className="text-gray-300" />
+                  </button>
+
+                  <div className="flex gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`min-w-[40px] h-[40px] rounded-lg font-semibold text-sm transition-all ${
+                          currentPage === page
+                            ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                            : "bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="p-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-700 transition-colors border border-gray-600"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight size={18} className="text-gray-300" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Mobile Card View */}
           <div className="lg:hidden space-y-3">
-            {logs.map((log) => (
+            {paginatedLogs.map((log) => (
               <div
                 key={log.id}
                 className="bg-gray-800 rounded-xl border border-gray-700 hover:border-gray-600 transition-all overflow-hidden"
@@ -454,6 +547,53 @@ export const AuditLogsTable: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            {/* Pagination for Mobile */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-8 pt-6 border-t border-gray-700">
+                <div className="text-xs sm:text-sm text-gray-400 text-center sm:text-left">
+                  Showing <span className="font-semibold text-gray-300">{startIndex + 1}</span> to{" "}
+                  <span className="font-semibold text-gray-300">{Math.min(endIndex, logs.length)}</span> of{" "}
+                  <span className="font-semibold text-gray-300">{logs.length}</span> logs
+                </div>
+                
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 1}
+                    className="p-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-700 transition-colors border border-gray-600"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft size={18} className="text-gray-300" />
+                  </button>
+
+                  <div className="flex gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`min-w-[40px] h-[40px] rounded-lg font-semibold text-sm transition-all ${
+                          currentPage === page
+                            ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                            : "bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="p-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-700 transition-colors border border-gray-600"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight size={18} className="text-gray-300" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

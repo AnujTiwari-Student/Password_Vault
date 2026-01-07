@@ -98,7 +98,7 @@ function LoginForm({error: propError}: {error?: string | null}) {
                                     <div className='flex items-center justify-between'>
                                         <FormLabel className='text-[#bfbfbf]'>Password</FormLabel>
                                         <span className='text-[13px] font-[600] text-blue-400 hover:underline cursor-pointer'>
-                                            <Link href="/forgot-password">Forgot Password?</Link>
+                                            <Link href="/auth/reset">Forgot Password?</Link>
                                         </span>
                                     </div>
                                     <FormControl>
