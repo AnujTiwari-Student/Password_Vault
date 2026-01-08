@@ -1,65 +1,77 @@
-import { prisma } from '@/db';
-import { currentUser } from '@/lib/current-user';
-import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from "@/db";
+import { currentUser } from "@/lib/current-user";
+import { NextRequest, NextResponse } from "next/server";
 
-type PlanType = 'basic' | 'professional' | 'enterprise' | 'free';
+type PlanType = "basic" | "professional" | "enterprise" | "free";
 
 const PLAN_LIMITS: Record<PlanType, number> = {
-  'free': 100,
-  'basic': 100,
-  'professional': 500,
-  'enterprise': 1000
+  free: 100,
+  basic: 100,
+  professional: 500,
+  enterprise: 1000,
 };
 
 export async function GET(req: NextRequest) {
   try {
     const user = await currentUser();
     if (!user || !user.id) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const searchParams = req.nextUrl.searchParams;
-    const vaultId = searchParams.get('id');
+    const vaultId = searchParams.get("id");
 
     if (!vaultId) {
-      return NextResponse.json({ 
-        message: 'Vault ID is required' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          message: "Vault ID is required",
+        },
+        { status: 400 }
+      );
     }
 
     const vault = await prisma.vault.findUnique({
       where: { id: vaultId },
       select: {
         user_id: true,
-        type: true
-      }
+        type: true,
+      },
     });
 
     if (!vault) {
-      return NextResponse.json({ 
-        message: 'Vault not found' 
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          message: "Vault not found",
+        },
+        { status: 404 }
+      );
     }
 
-    if (vault.type === 'personal' && vault.user_id !== user.id) {
-      return NextResponse.json({ 
-        message: 'Not a personal vault' 
-      }, { status: 400 });
+    if (vault.type === "personal" && vault.user_id !== user.id) {
+      return NextResponse.json(
+        {
+          message: "Not a personal vault",
+        },
+        { status: 400 }
+      );
     }
 
     const items = await prisma.item.findMany({
       where: { vault_id: vaultId },
-      orderBy: { updated_at: 'desc' }
+      orderBy: { updated_at: "desc" },
     });
 
     return NextResponse.json({ items }, { status: 200 });
-
   } catch (error) {
-    console.error('Items GET error:', error);
-    return NextResponse.json({ 
-      message: 'Internal Server Error',
-      error: process.env.NODE_ENV === 'development' ? String(error) : undefined
-    }, { status: 500 });
+    console.error("Items GET error:", error);
+    return NextResponse.json(
+      {
+        message: "Internal Server Error",
+        error:
+          process.env.NODE_ENV === "development" ? String(error) : undefined,
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -67,9 +79,12 @@ export async function POST(req: NextRequest) {
   try {
     const user = await currentUser();
     if (!user || !user.id) {
-      return NextResponse.json({ 
-        message: 'Unauthorized' 
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          message: "Unauthorized",
+        },
+        { status: 401 }
+      );
     }
 
     const body = await req.json();
@@ -84,19 +99,31 @@ export async function POST(req: NextRequest) {
       password_ct,
       totp_seed_ct,
       notes_ct,
-      created_by
+      created_by,
     } = body;
 
-    if (!vaultId || !item_name || !type || !Array.isArray(type) || type.length === 0) {
-      return NextResponse.json({ 
-        message: 'Missing required fields: vaultId, item_name, type' 
-      }, { status: 400 });
+    if (
+      !vaultId ||
+      !item_name ||
+      !type ||
+      !Array.isArray(type) ||
+      type.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          message: "Missing required fields: vaultId, item_name, type",
+        },
+        { status: 400 }
+      );
     }
 
     if (!item_key_wrapped) {
-      return NextResponse.json({ 
-        message: 'item_key_wrapped is required' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          message: "item_key_wrapped is required",
+        },
+        { status: 400 }
+      );
     }
 
     const vault = await prisma.vault.findUnique({
@@ -105,67 +132,76 @@ export async function POST(req: NextRequest) {
         id: true,
         type: true,
         user_id: true,
-        org_id: true
-      }
+        org_id: true,
+      },
     });
 
     if (!vault) {
-      return NextResponse.json({ 
-        message: 'Vault not found' 
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          message: "Vault not found",
+        },
+        { status: 404 }
+      );
     }
 
-    if (vault.type === 'personal') {
+    if (vault.type === "personal") {
       if (vault.user_id !== user.id) {
-        return NextResponse.json({ 
-          message: 'Access denied: Not your personal vault' 
-        }, { status: 403 });
+        return NextResponse.json(
+          {
+            message: "Access denied: Not your personal vault",
+          },
+          { status: 403 }
+        );
       }
-    } else if (vault.type === 'org') {
+    } else if (vault.type === "org") {
       const membership = await prisma.membership.findFirst({
         where: {
           user_id: user.id,
-          org_id: vault.org_id!
-        }
+          org_id: vault.org_id!,
+        },
       });
 
       if (!membership) {
-        return NextResponse.json({ 
-          message: 'Access denied: Not a member of this organization' 
-        }, { status: 403 });
+        return NextResponse.json(
+          {
+            message: "Access denied: Not a member of this organization",
+          },
+          { status: 403 }
+        );
       }
 
-      if (membership.role === 'viewer') {
-        return NextResponse.json({ 
-          message: 'Access denied: Viewers cannot create items' 
-        }, { status: 403 });
+      if (membership.role === "viewer") {
+        return NextResponse.json(
+          {
+            message: "Access denied: Viewers cannot create items",
+          },
+          { status: 403 }
+        );
       }
     }
 
-    const userWithPlan = await prisma.user.findUnique({
+    const userPlan = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { 
-        plan_type: true,
-        vault: {
-          where: { id: vaultId },
-          select: { 
-            items: { 
-              where: { deleted_at: null },
-              select: { id: true }
-            }
-          }
-        }
-      }
+      select: { plan_type: true },
     });
 
-    // @ts-expect-error: plan_type exists
-    const currentItemsCount = userWithPlan?.vault?.[0]?.items.length || 0;
-    const planLimit = PLAN_LIMITS[userWithPlan?.plan_type as PlanType] || 0;
+    const currentItemsCount = await prisma.item.count({
+      where: { vault_id: vaultId },
+    });
+
+    const planLimit =
+      PLAN_LIMITS[(userPlan?.plan_type as PlanType) || "free"] || 100;
 
     if (currentItemsCount >= planLimit && planLimit !== 1000) {
-      return NextResponse.json({ 
-        message: `Plan limit exceeded (${currentItemsCount}/${planLimit}). Upgrade to ${userWithPlan?.plan_type === 'basic' ? 'Professional' : 'Enterprise'} plan.` 
-      }, { status: 402 });
+      return NextResponse.json(
+        {
+          message: `Plan limit exceeded (${currentItemsCount}/${planLimit}). Upgrade to ${
+            userPlan?.plan_type === "basic" ? "Professional" : "Enterprise"
+          } plan.`,
+        },
+        { status: 402 }
+      );
     }
 
     const newItem = await prisma.item.create({
@@ -182,22 +218,28 @@ export async function POST(req: NextRequest) {
         note_ct: notes_ct || null,
         created_by: created_by || user.id,
         updated_at: new Date(),
-      }
+      },
     });
 
-    console.log('✅ Item created successfully:', newItem.id);
+    console.log("✅ Item created successfully:", newItem.id);
 
-    return NextResponse.json({ 
-      message: 'Item created successfully',
-      item: newItem 
-    }, { status: 201 });
-
+    return NextResponse.json(
+      {
+        message: "Item created successfully",
+        item: newItem,
+      },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error('❌ Items POST error:', error);
-    return NextResponse.json({ 
-      message: 'Internal Server Error',
-      error: process.env.NODE_ENV === 'development' ? String(error) : undefined
-    }, { status: 500 });
+    console.error("❌ Items POST error:", error);
+    return NextResponse.json(
+      {
+        message: "Internal Server Error",
+        error:
+          process.env.NODE_ENV === "development" ? String(error) : undefined,
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -205,7 +247,7 @@ export async function PUT(req: NextRequest) {
   try {
     const user = await currentUser();
     if (!user || !user.id) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -222,9 +264,12 @@ export async function PUT(req: NextRequest) {
     } = body;
 
     if (!itemId) {
-      return NextResponse.json({ 
-        message: 'Item ID is required' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          message: "Item ID is required",
+        },
+        { status: 400 }
+      );
     }
 
     const item = await prisma.item.findUnique({
@@ -234,65 +279,196 @@ export async function PUT(req: NextRequest) {
           select: {
             type: true,
             user_id: true,
-            org_id: true
-          }
-        }
-      }
+            org_id: true,
+            org: {
+              select: {
+                owner_user_id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!item) {
-      return NextResponse.json({ 
-        message: 'Item not found' 
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          message: "Item not found",
+        },
+        { status: 404 }
+      );
     }
 
-    if (item.vault.type === 'personal') {
+    // Store old values for audit trail
+    const oldValues = {
+      name: item.name,
+      url: item.url,
+      type: item.type,
+      tags: item.tags,
+    };
+
+    // Personal vault - only owner can edit
+    if (item.vault.type === "personal") {
       if (item.vault.user_id !== user.id) {
-        return NextResponse.json({ 
-          message: 'Access denied' 
-        }, { status: 403 });
+        return NextResponse.json(
+          {
+            message: "Access denied: Not your personal vault",
+          },
+          { status: 403 }
+        );
       }
-    } else if (item.vault.type === 'org') {
+
+      const updatedItem = await prisma.item.update({
+        where: { id: itemId },
+        data: {
+          name: item_name,
+          url: item_url,
+          type: type,
+          tags: tags,
+          username_ct: username_ct,
+          password_ct: password_ct,
+          totp_seed_ct: totp_seed_ct,
+          note_ct: notes_ct,
+          updated_at: new Date(),
+        },
+      });
+
+      // Log to personal Logs
+      await prisma.logs.create({
+        data: {
+          user_id: user.id,
+          action: "item.update",
+          subject_type: "item",
+          ip:
+            req.headers.get("x-forwarded-for") ||
+            req.headers.get("x-real-ip") ||
+            null,
+          ua: req.headers.get("user-agent") || null,
+          ts: new Date(),
+          meta: {
+            item_id: itemId,
+            item_name: item_name,
+            vault_id: item.vault_id,
+            vault_type: "personal",
+            old_values: oldValues,
+            changed_fields: Object.keys(body).filter((k) => k !== "itemId"),
+          },
+        },
+      });
+
+      console.log("✅ Personal vault item updated:", itemId);
+      return NextResponse.json(
+        {
+          message: "Item updated successfully",
+          item: updatedItem,
+        },
+        { status: 200 }
+      );
+    }
+
+    // Organization vault - owner and admin can edit
+    if (item.vault.type === "org") {
+      const isOrgOwner = item.vault.org?.owner_user_id === user.id;
+
       const membership = await prisma.membership.findFirst({
         where: {
           user_id: user.id,
-          org_id: item.vault.org_id!
-        }
+          org_id: item.vault.org_id!,
+        },
       });
 
-      if (!membership || membership.role === 'viewer') {
-        return NextResponse.json({ 
-          message: 'Access denied' 
-        }, { status: 403 });
+      const isAdmin = membership?.role === "admin";
+      const canEdit = isOrgOwner || isAdmin;
+
+      if (!canEdit) {
+        return NextResponse.json(
+          {
+            message: "Access denied: Only owner and admin can edit items",
+          },
+          { status: 403 }
+        );
       }
+
+      const parseTags = (tagsString: string | null | string[]) => {
+        if (!tagsString) return undefined;
+        if (Array.isArray(tagsString)) return tagsString;
+        if (tagsString === "[]" || tagsString === "null") return [];
+        try {
+          return JSON.parse(tagsString) as string[];
+        } catch {
+          return [];
+        }
+      };
+
+      const updatedItem = await prisma.item.update({
+        where: { id: itemId },
+        data: {
+          name: item_name,
+          url: item_url,
+          type: type, 
+          tags: parseTags(tags), 
+          username_ct: username_ct || undefined,
+          password_ct: password_ct || undefined,
+          totp_seed_ct: totp_seed_ct || undefined,
+          note_ct: notes_ct || undefined, 
+          updated_at: new Date(),
+        },
+      });
+
+      // Log to organization Audit
+      await prisma.audit.create({
+        data: {
+          org_id: item.vault.org_id!,
+          actor_user_id: user.id,
+          action: "item.update",
+          subject_type: "item",
+          subject_id: itemId,
+          ip:
+            req.headers.get("x-forwarded-for") ||
+            req.headers.get("x-real-ip") ||
+            null,
+          ua: req.headers.get("user-agent") || null,
+          ts: new Date(),
+          meta: {
+            item_id: itemId,
+            item_name: item_name,
+            vault_id: item.vault_id,
+            vault_type: "org",
+            org_name: item.vault.org?.name,
+            actor_role: isOrgOwner ? "owner" : "admin",
+            old_values: oldValues,
+            changed_fields: Object.keys(body).filter((k) => k !== "itemId"),
+          },
+        },
+      });
+
+      console.log("✅ Org vault item updated:", itemId);
+      return NextResponse.json(
+        {
+          message: "Item updated successfully",
+          item: updatedItem,
+        },
+        { status: 200 }
+      );
     }
 
-    const updatedItem = await prisma.item.update({
-      where: { id: itemId },
-      data: {
-        name: item_name,
-        url: item_url,
-        type: type,
-        tags: tags,
-        username_ct: username_ct,
-        password_ct: password_ct,
-        totp_seed_ct: totp_seed_ct,
-        note_ct: notes_ct,
-        updated_at: new Date(),
-      }
-    });
-
-    return NextResponse.json({ 
-      message: 'Item updated successfully',
-      item: updatedItem 
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        message: "Invalid vault type",
+      },
+      { status: 400 }
+    );
   } catch (error) {
-    console.error('Items PUT error:', error);
-    return NextResponse.json({ 
-      message: 'Internal Server Error',
-      error: process.env.NODE_ENV === 'development' ? String(error) : undefined
-    }, { status: 500 });
+    console.error("Items PUT error:", error);
+    return NextResponse.json(
+      {
+        message: "Internal Server Error",
+        error:
+          process.env.NODE_ENV === "development" ? String(error) : undefined,
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -300,16 +476,19 @@ export async function DELETE(req: NextRequest) {
   try {
     const user = await currentUser();
     if (!user || !user.id) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const searchParams = req.nextUrl.searchParams;
-    const itemId = searchParams.get('id');
+    const itemId = searchParams.get("id");
 
     if (!itemId) {
-      return NextResponse.json({ 
-        message: 'Item ID is required' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          message: "Item ID is required",
+        },
+        { status: 400 }
+      );
     }
 
     const item = await prisma.item.findUnique({
@@ -319,52 +498,133 @@ export async function DELETE(req: NextRequest) {
           select: {
             type: true,
             user_id: true,
-            org_id: true
-          }
-        }
-      }
+            org_id: true,
+            org: {
+              select: {
+                owner_user_id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!item) {
-      return NextResponse.json({ 
-        message: 'Item not found' 
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          message: "Item not found",
+        },
+        { status: 404 }
+      );
     }
 
-    if (item.vault.type === 'personal') {
+    if (item.vault.type === "personal") {
       if (item.vault.user_id !== user.id) {
-        return NextResponse.json({ 
-          message: 'Access denied' 
-        }, { status: 403 });
+        return NextResponse.json(
+          {
+            message: "Access denied: Not your personal vault",
+          },
+          { status: 403 }
+        );
       }
-    } else if (item.vault.type === 'org') {
-      const membership = await prisma.membership.findFirst({
-        where: {
-          user_id: user.id,
-          org_id: item.vault.org_id!
-        }
+
+      await prisma.item.delete({
+        where: { id: itemId },
       });
 
-      if (!membership || membership.role === 'viewer') {
-        return NextResponse.json({ 
-          message: 'Access denied' 
-        }, { status: 403 });
-      }
+      await prisma.logs.create({
+        data: {
+          user_id: user.id,
+          action: "item.delete",
+          subject_type: "item",
+          ip:
+            req.headers.get("x-forwarded-for") ||
+            req.headers.get("x-real-ip") ||
+            null,
+          ua: req.headers.get("user-agent") || null,
+          ts: new Date(),
+          meta: {
+            item_id: itemId,
+            item_name: item.name,
+            vault_id: item.vault_id,
+            vault_type: "personal",
+          },
+        },
+      });
+
+      console.log("✅ Personal vault item deleted:", itemId);
+      return NextResponse.json(
+        {
+          message: "Item deleted successfully",
+        },
+        { status: 200 }
+      );
     }
 
-    await prisma.item.delete({
-      where: { id: itemId }
-    });
+    if (item.vault.type === "org") {
+      const isOrgOwner = item.vault.org?.owner_user_id === user.id;
 
-    return NextResponse.json({ 
-      message: 'Item deleted successfully' 
-    }, { status: 200 });
+      if (!isOrgOwner) {
+        return NextResponse.json(
+          {
+            message: "Access denied: Only organization owner can delete items",
+          },
+          { status: 403 }
+        );
+      }
 
+      await prisma.item.delete({
+        where: { id: itemId },
+      });
+
+      await prisma.audit.create({
+        data: {
+          org_id: item.vault.org_id!,
+          actor_user_id: user.id,
+          action: "item.delete",
+          subject_type: "item",
+          subject_id: itemId,
+          ip:
+            req.headers.get("x-forwarded-for") ||
+            req.headers.get("x-real-ip") ||
+            null,
+          ua: req.headers.get("user-agent") || null,
+          ts: new Date(),
+          meta: {
+            item_id: itemId,
+            item_name: item.name,
+            vault_id: item.vault_id,
+            vault_type: "org",
+            org_name: item.vault.org?.name,
+          },
+        },
+      });
+
+      console.log("✅ Org vault item deleted by owner:", itemId);
+      return NextResponse.json(
+        {
+          message: "Item deleted successfully",
+        },
+        { status: 200 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        message: "Invalid vault type",
+      },
+      { status: 400 }
+    );
   } catch (error) {
-    console.error('Items DELETE error:', error);
-    return NextResponse.json({ 
-      message: 'Internal Server Error',
-      error: process.env.NODE_ENV === 'development' ? String(error) : undefined
-    }, { status: 500 });
+    console.error("Items DELETE error:", error);
+    return NextResponse.json(
+      {
+        message: "Internal Server Error",
+        error:
+          process.env.NODE_ENV === "development" ? String(error) : undefined,
+      },
+      { status: 500 }
+    );
   }
 }

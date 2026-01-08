@@ -91,7 +91,7 @@ model User {
   public_key                 String?
   created_at                 DateTime       @default(now())
   last_login                 DateTime?
-  plan_type                  PlanType?       @default(basic)
+  plan_type                  PlanType?      @default(basic)
   account_type               String
   accounts                   Account[]
   vaults                     Vault[]

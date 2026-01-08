@@ -3,7 +3,7 @@
 import { prisma } from "@/db"
 import { redis } from "@/serverless"
 import { z } from "zod"
-import { hashAuthPassword } from "@/lib/password-hash"  // ✅ Your Argon2 utility
+import { hashAuthPassword } from "@/lib/password-hash"  
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 

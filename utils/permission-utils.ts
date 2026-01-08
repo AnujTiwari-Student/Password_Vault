@@ -106,7 +106,6 @@ type UserLike = Pick<SessionUser, "id" | "org" | "member">;
 export function canCreateOrg(user: UserLike | null): boolean {
   if (!user) return false;
 
-  // org owner
   if (user.org && "owner_user_id" in user.org && user.org.owner_user_id === user.id) {
     return true;
   }

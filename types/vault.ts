@@ -1,4 +1,3 @@
-// Ensure your Membership type has all required properties
 export type MemberRole = "owner" | "admin" | "member" | "viewer";
 
 export interface Membership {
@@ -8,19 +7,11 @@ export interface Membership {
   role: MemberRole;
   created_at: string;
   updated_at: string;
-  // Add any other properties your Membership needs
 }
-
-// types/vault.ts
 
 export type ItemType = "login" | "note" | "totp";
 
-
-// types/vault.ts
-
 export type VaultType = "personal" | "org";
-
-// types/vault.ts
 
 export interface User {
   id: string;
@@ -87,5 +78,26 @@ export interface DecryptedData {
   password?: string;
   totp_seed?: string;
   note?: string;
+}
+
+export interface DecryptedItemData {
+  username?: string;
+  password?: string;
+  totp_seed?: string;
+  note?: string;
+}
+
+
+export function isValidDecryptedData(data: unknown): data is DecryptedItemData {
+  if (!data || typeof data !== 'object') return false;
+  
+  const d = data as Record<string, unknown>;
+  
+  const validKeys = ['username', 'password', 'totp_seed', 'note'];
+  
+  return Object.keys(d).every(key => {
+    if (!validKeys.includes(key)) return false;
+    return typeof d[key] === 'string' || d[key] === undefined;
+  });
 }
 
