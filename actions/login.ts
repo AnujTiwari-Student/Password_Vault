@@ -1,6 +1,6 @@
 "use server";
 
-import { getUserByEmail } from "@/data/users-data";
+import { getUserByEmailWithAccounts } from "@/data/users-data";
 import { signIn } from "@/lib/auth";
 import { send2faVerificationCode } from "@/lib/mail";
 import { verifyAuthPassword } from "@/lib/password-hash";
@@ -49,12 +49,27 @@ export const login = async (data: z.infer<typeof LoginSchema>): Promise<LoginAct
 
     const { email, password } = validatedFields.data;
 
-    const existingUser = await getUserByEmail(email);
+    const existingUser = await getUserByEmailWithAccounts(email);
     if (!existingUser) {
       return {
         success: false,
         errors: {
           email: ["No user found with this email"],
+        },
+      };
+    }
+
+    if (!existingUser.auth_hash && existingUser.accounts && existingUser.accounts.length > 0) {
+      const providers = existingUser.accounts
+        .map((acc: { provider: string }) => acc.provider)
+        .filter((p: string) => p === 'google' || p === 'github')
+        .map((p: string) => p.charAt(0).toUpperCase() + p.slice(1))
+        .join(' or ');
+
+      return {
+        success: false,
+        errors: {
+          _form: [`This email is linked with ${providers}. Please use ${providers} to login.`],
         },
       };
     }

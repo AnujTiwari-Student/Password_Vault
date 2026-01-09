@@ -114,6 +114,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
     fetchOrgMembers();
   };
 
+  //  eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleRemoveMember = async (memberId: string, memberName: string) => {
     if (
       !confirm(
@@ -368,7 +369,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
                     >
                       {member.role}
                     </span>
-                    {member.role !== "owner" &&
+                    {/* {member.role !== "owner" &&
                       member.user_id !== user?.id && (
                         <button
                           onClick={() =>
@@ -382,7 +383,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
                         >
                           <UserX className="w-4 h-4" />
                         </button>
-                      )}
+                      )} */}
                   </div>
                 </div>
               ))}

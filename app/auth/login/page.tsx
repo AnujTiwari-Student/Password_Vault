@@ -11,11 +11,12 @@ import GithubIcon from "@/components/svg/github-svg";
 import { click } from "@/utils/oauth-login-function";
 
 export default function Login() {
-
     const searchParams = useSearchParams();
-    const error = searchParams.get("error") === "OAuthAccountNotLinked"
+    const errorParam = searchParams?.get("error");
+    
+    const error = errorParam === "OAuthAccountNotLinked"
         ? "Email already linked with another provider."
-        : undefined;
+        : null;
 
     return (
         <main className="flex flex-row w-full h-[100lvh]">

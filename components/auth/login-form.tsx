@@ -27,6 +27,9 @@ function LoginForm({error: propError}: {error?: string | null}) {
     const [success, setSuccess] = React.useState<string | null>(null);
     const [isPending, startTransition] = React.useTransition();
 
+    console.log("LoginForm prop error:", propError);
+    console.log("LoginForm internal error:", error);
+
     const form = useForm<AuthFormValues>({
         resolver: zodResolver(LoginSchema),
         defaultValues: {
@@ -122,7 +125,7 @@ function LoginForm({error: propError}: {error?: string | null}) {
                             )}
                         />
                     </div>
-                    <FormError message={error || propError} />
+                    <FormError message={propError || error} />
                     <FormSuccess message={success} />
                     <Button
                         type="submit"

@@ -8,6 +8,26 @@ export const getUserByEmail = async (email: string) => {
     return user;
 }
 
+export async function getUserByEmailWithAccounts(email: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        accounts: {
+          select: {
+            provider: true,
+            type: true,
+          }
+        }
+      }
+    });
+    return user;
+  } catch (error) {
+    console.error("Error fetching user by email with accounts:", error);
+    return null;
+  }
+}
+
 export const getUserById = async (id: string) => {
     return prisma.user.findUnique({
         where: { id }

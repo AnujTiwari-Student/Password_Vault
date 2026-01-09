@@ -895,6 +895,7 @@ export const UnifiedVaultList: React.FC = () => {
         canEdit={canEdit}
         vaultType={vaultType}
         orgId={vaultType === "org" ? currentOrgId : null}
+        // @ts-expect-error TODO fix this any type
         onDelete={() => {
           toast.success("Item deleted (API not implemented yet)");
           fetchItems();

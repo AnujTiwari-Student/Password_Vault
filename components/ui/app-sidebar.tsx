@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { TeamSwitcher } from "./team-switcher";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   activeTab: string;
@@ -32,6 +33,7 @@ export function AppSidebar({
   ...props
 }: AppSidebarProps) {
   const user = useCurrentUser();
+  const { hasNotifications } = useNotifications();
 
   const isOrgAccount = React.useMemo(() => {
     return user?.account_type === 'org';
@@ -104,6 +106,7 @@ export function AppSidebar({
         title: "Notifications",
         url: "#",
         icon: BellRing,
+        hasNotification: hasNotifications,
         items: [
           {
             title: "Active",
