@@ -42,3 +42,5 @@ export const send2faVerificationCode = async (email: string, otp: string) => {
 
     await sendEmail(email, "2FA Setup — Confirm with OTP", emailTemplate);
 };
+
+export { emailTemplates };

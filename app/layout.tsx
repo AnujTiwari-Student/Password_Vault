@@ -6,6 +6,7 @@ import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { VaultProvider } from "@/context/active-vault-context";
+import { MnemonicProvider } from "@/context/MnemonicContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,14 +32,18 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="hydrated">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <SessionProvider session={session}>
-          <VaultProvider>
-            <SidebarProvider className="bg-gray-900">
-              <main className="w-max flex-1">{children}</main>
-              <Toaster />
-            </SidebarProvider>
-          </VaultProvider>
+          <MnemonicProvider>
+            <VaultProvider>
+              <SidebarProvider className="bg-gray-900">
+                <main className="w-max flex-1">{children}</main>
+                <Toaster />
+              </SidebarProvider>
+            </VaultProvider>
+          </MnemonicProvider>
         </SessionProvider>
       </body>
     </html>
