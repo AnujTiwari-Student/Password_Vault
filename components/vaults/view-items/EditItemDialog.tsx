@@ -1,5 +1,4 @@
-
-
+"use client";
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -14,14 +13,23 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { APIVaultItem, DecryptedItemData } from '@/types/vault';
+import { APIVaultItem } from '@/types/vault';
+
+interface FormData {
+  name: string;
+  url: string;
+  username: string;
+  password: string;
+  totp_seed: string;
+  note: string;
+}
 
 interface EditItemDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedData: Partial<DecryptedItemData>) => void;
+  onSave: (data: Partial<FormData>) => void;
   item: APIVaultItem;
-  decryptedData: DecryptedItemData | null;
+  decryptedData: { [key: string]: string } | null;
   isEditing: boolean;
 }
 
@@ -33,21 +41,30 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
   decryptedData,
   isEditing,
 }) => {
-  const [formData, setFormData] = useState<Partial<DecryptedItemData>>({});
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    url: '',
+    username: '',
+    password: '',
+    totp_seed: '',
+    note: '',
+  });
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (decryptedData) {
       setFormData({
+        name: decryptedData.name || item.name || '',
+        url: decryptedData.url || item.url || '',
         username: decryptedData.username || '',
         password: decryptedData.password || '',
         totp_seed: decryptedData.totp_seed || '',
         note: decryptedData.note || '',
       });
     }
-  }, [decryptedData]);
+  }, [decryptedData, item]);
 
-  const handleChange = (field: keyof DecryptedItemData, value: string) => {
+  const handleChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
@@ -56,16 +73,19 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    const updatedData: Partial<FormData> = {};
+    
+    if (formData.name !== item.name) updatedData.name = formData.name;
+    if (formData.url !== item.url) updatedData.url = formData.url || '';
+    if (formData.username !== decryptedData?.username) updatedData.username = formData.username;
+    if (formData.password !== decryptedData?.password) updatedData.password = formData.password;
+    if (formData.totp_seed !== decryptedData?.totp_seed) updatedData.totp_seed = formData.totp_seed;
+    if (formData.note !== decryptedData?.note) updatedData.note = formData.note;
+
+    onSave(updatedData);
   };
 
   const handleCancel = () => {
-    setFormData({
-      username: decryptedData?.username || '',
-      password: decryptedData?.password || '',
-      totp_seed: decryptedData?.totp_seed || '',
-      note: decryptedData?.note || '',
-    });
     onClose();
   };
 
@@ -73,24 +93,39 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={handleCancel}>
       <DialogContent className="max-w-2xl bg-gray-800 border-gray-700 text-white">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            Edit Item: {item.name}
-          </DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Update the details for this vault item
-          </DialogDescription>
+          <DialogTitle>Edit Item: {item.name}</DialogTitle>
+          <DialogDescription>Update the details for this vault item</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              className="bg-gray-900 border-gray-700 text-white focus:border-blue-500"
+              disabled={isEditing}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="url">Website</Label>
+            <Input
+              id="url"
+              value={formData.url}
+              onChange={(e) => handleChange('url', e.target.value)}
+              className="bg-gray-900 border-gray-700 text-white focus:border-blue-500"
+              disabled={isEditing}
+            />
+          </div>
+
           {item.username_ct && (
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-gray-300">
-                Username
-              </Label>
+              <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
-                type="text"
-                value={formData.username || ''}
+                value={formData.username}
                 onChange={(e) => handleChange('username', e.target.value)}
                 className="bg-gray-900 border-gray-700 text-white focus:border-blue-500"
                 disabled={isEditing}
@@ -100,14 +135,12 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
 
           {item.password_ct && (
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-300">
-                Password
-              </Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  value={formData.password || ''}
+                  value={formData.password}
                   onChange={(e) => handleChange('password', e.target.value)}
                   className="bg-gray-900 border-gray-700 text-white focus:border-blue-500 pr-12"
                   disabled={isEditing}
@@ -118,11 +151,7 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
                   disabled={isEditing}
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -130,13 +159,10 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
 
           {item.totp_seed_ct && (
             <div className="space-y-2">
-              <Label htmlFor="totp_seed" className="text-gray-300">
-                TOTP Secret
-              </Label>
+              <Label htmlFor="totp_seed">TOTP Secret</Label>
               <Input
                 id="totp_seed"
-                type="text"
-                value={formData.totp_seed || ''}
+                value={formData.totp_seed}
                 onChange={(e) => handleChange('totp_seed', e.target.value)}
                 className="bg-gray-900 border-gray-700 text-white focus:border-blue-500 font-mono"
                 disabled={isEditing}
@@ -146,14 +172,12 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
 
           {item.note_ct && (
             <div className="space-y-2">
-              <Label htmlFor="note" className="text-gray-300">
-                Note
-              </Label>
+              <Label htmlFor="note">Note</Label>
               <Textarea
                 id="note"
-                value={formData.note || ''}
+                value={formData.note}
                 onChange={(e) => handleChange('note', e.target.value)}
-                className="bg-gray-900 border-gray-700 text-white focus:border-blue-500 min-h-[120px] resize-none"
+                className="bg-gray-900 border-gray-700 text-white focus:border-blue-500 min-h-[120px]"
                 disabled={isEditing}
               />
             </div>

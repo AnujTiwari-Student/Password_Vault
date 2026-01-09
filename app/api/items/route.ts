@@ -261,13 +261,13 @@ export async function PUT(req: NextRequest) {
       password_ct,
       totp_seed_ct,
       notes_ct,
+      item_key_wrapped,
+      item_key_version,
     } = body;
 
     if (!itemId) {
       return NextResponse.json(
-        {
-          message: "Item ID is required",
-        },
+        { message: "Item ID is required" },
         { status: 400 }
       );
     }
@@ -292,15 +292,9 @@ export async function PUT(req: NextRequest) {
     });
 
     if (!item) {
-      return NextResponse.json(
-        {
-          message: "Item not found",
-        },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Item not found" }, { status: 404 });
     }
 
-    // Store old values for audit trail
     const oldValues = {
       name: item.name,
       url: item.url,
@@ -308,13 +302,10 @@ export async function PUT(req: NextRequest) {
       tags: item.tags,
     };
 
-    // Personal vault - only owner can edit
     if (item.vault.type === "personal") {
       if (item.vault.user_id !== user.id) {
         return NextResponse.json(
-          {
-            message: "Access denied: Not your personal vault",
-          },
+          { message: "Access denied: Not your personal vault" },
           { status: 403 }
         );
       }
@@ -330,16 +321,19 @@ export async function PUT(req: NextRequest) {
           password_ct: password_ct,
           totp_seed_ct: totp_seed_ct,
           note_ct: notes_ct,
+          item_key_wrapped: item_key_wrapped || item.item_key_wrapped,
+          item_key_version:
+            item_key_version || item.item_key_version || BigInt(Date.now()),
           updated_at: new Date(),
         },
       });
 
-      // Log to personal Logs
       await prisma.logs.create({
         data: {
           user_id: user.id,
           action: "item.update",
           subject_type: "item",
+          subject_id: itemId,
           ip:
             req.headers.get("x-forwarded-for") ||
             req.headers.get("x-real-ip") ||
@@ -359,39 +353,31 @@ export async function PUT(req: NextRequest) {
 
       console.log("✅ Personal vault item updated:", itemId);
       return NextResponse.json(
-        {
-          message: "Item updated successfully",
-          item: updatedItem,
-        },
+        { message: "Item updated successfully", item: updatedItem },
         { status: 200 }
       );
     }
 
-    // Organization vault - owner and admin can edit
     if (item.vault.type === "org") {
       const isOrgOwner = item.vault.org?.owner_user_id === user.id;
-
       const membership = await prisma.membership.findFirst({
         where: {
           user_id: user.id,
           org_id: item.vault.org_id!,
         },
       });
-
       const isAdmin = membership?.role === "admin";
       const canEdit = isOrgOwner || isAdmin;
 
       if (!canEdit) {
         return NextResponse.json(
-          {
-            message: "Access denied: Only owner and admin can edit items",
-          },
+          { message: "Access denied: Only owner and admin can edit items" },
           { status: 403 }
         );
       }
 
       const parseTags = (tagsString: string | null | string[]) => {
-        if (!tagsString) return undefined;
+        if (!tagsString) return [];
         if (Array.isArray(tagsString)) return tagsString;
         if (tagsString === "[]" || tagsString === "null") return [];
         try {
@@ -406,17 +392,19 @@ export async function PUT(req: NextRequest) {
         data: {
           name: item_name,
           url: item_url,
-          type: type, 
-          tags: parseTags(tags), 
-          username_ct: username_ct || undefined,
-          password_ct: password_ct || undefined,
-          totp_seed_ct: totp_seed_ct || undefined,
-          note_ct: notes_ct || undefined, 
+          type: type,
+          tags: parseTags(tags),
+          username_ct: username_ct,
+          password_ct: password_ct,
+          totp_seed_ct: totp_seed_ct,
+          note_ct: notes_ct,
+          item_key_wrapped: item_key_wrapped || item.item_key_wrapped,
+          item_key_version:
+            item_key_version?.toString() || Date.now().toString(),
           updated_at: new Date(),
         },
       });
 
-      // Log to organization Audit
       await prisma.audit.create({
         data: {
           org_id: item.vault.org_id!,
@@ -445,18 +433,13 @@ export async function PUT(req: NextRequest) {
 
       console.log("✅ Org vault item updated:", itemId);
       return NextResponse.json(
-        {
-          message: "Item updated successfully",
-          item: updatedItem,
-        },
+        { message: "Item updated successfully", item: updatedItem },
         { status: 200 }
       );
     }
 
     return NextResponse.json(
-      {
-        message: "Invalid vault type",
-      },
+      { message: "Invalid vault type" },
       { status: 400 }
     );
   } catch (error) {

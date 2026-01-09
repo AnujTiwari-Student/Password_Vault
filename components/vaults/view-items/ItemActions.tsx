@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Trash2, Loader2 } from 'lucide-react';
@@ -19,9 +20,9 @@ export const ItemActions: React.FC<ItemActionsProps> = ({
   onDelete,
   onEdit,
 }) => {
-  const isDisabled = isDeleting || isPending || isCurrentlyDecrypting;
+  const isDisabled = isDeleting || isEditing || isPending || isCurrentlyDecrypting;
 
-  console.log(isEditing, onEdit)
+  console.log(onEdit)
 
   return (
     <div className="flex justify-end gap-3 pt-4 border-t border-gray-700 mt-4">
@@ -51,12 +52,12 @@ export const ItemActions: React.FC<ItemActionsProps> = ({
       >
         {isEditing ? (
           <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" />
             Saving...
           </>
         ) : (
           <>
-            <Edit2 className="w-4 h-4 mr-2" />
+            <Edit2 className="w-4 h-4" />
             Edit
           </>
         )}

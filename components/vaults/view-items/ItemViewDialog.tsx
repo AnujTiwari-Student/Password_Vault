@@ -1,9 +1,15 @@
-import React from 'react';
+"use client";
+import React, { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { APIVaultItem, DecryptedItemData } from '@/types/vault';
-import { ItemHeader } from './ItemHeader';
-import { ItemContent } from './ItemContent';
-import { ItemActions } from './ItemActions';
+import { APIVaultItem, DecryptedItemData } from "@/types/vault";
+import { ItemHeader } from "./ItemHeader";
+import { ItemContent } from "./ItemContent";
+import { ItemActions } from "./ItemActions";
+
+interface ExtendedDecryptedItemData extends DecryptedItemData {
+  name?: string;
+  url?: string | null;
+}
 
 interface ItemViewDialogProps {
   isOpen: boolean;
@@ -13,14 +19,14 @@ interface ItemViewDialogProps {
   showPassword: boolean;
   showTotp: boolean;
   masterPassphrase: string | null;
-  decryptedData: DecryptedItemData | null;
+  decryptedData: ExtendedDecryptedItemData | null;
   isCurrentlyDecrypting: boolean;
   isDeleting: boolean;
   isEditing: boolean;
   isPending: boolean;
   onTogglePassword: () => void;
   onToggleTotp: () => void;
-  onCopySensitive: (field: 'username' | 'password' | 'totp_seed') => void;
+  onCopySensitive: (field: string) => void;
   onViewSensitive: () => void;
   onUnlockItem: () => void;
   onDelete: () => void;
@@ -45,9 +51,27 @@ export const ItemViewDialog: React.FC<ItemViewDialogProps> = ({
   onCopySensitive,
   onViewSensitive,
   onUnlockItem,
-  onDelete,
   onEdit,
 }) => {
+  const [localDeleting, setLocalDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setLocalDeleting(true);
+    try {
+      const response = await fetch(`/api/items?id=${item.id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        onClose();
+      }
+    } finally {
+      setLocalDeleting(false);
+    }
+  };
+
+  const finalIsDeleting = isDeleting || localDeleting;
+  const finalIsEditing = isEditing;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto scrollbar-hide bg-gray-800 border-gray-700 text-white">
@@ -60,7 +84,6 @@ export const ItemViewDialog: React.FC<ItemViewDialogProps> = ({
           masterPassphrase={masterPassphrase}
           decryptedData={decryptedData}
           isCurrentlyDecrypting={isCurrentlyDecrypting}
-          isDeleting={isDeleting}
           isPending={isPending}
           onTogglePassword={onTogglePassword}
           onToggleTotp={onToggleTotp}
@@ -71,11 +94,11 @@ export const ItemViewDialog: React.FC<ItemViewDialogProps> = ({
 
         {canEdit && (
           <ItemActions
-            isDeleting={isDeleting}
-            isEditing={isEditing}
+            isDeleting={finalIsDeleting}
+            isEditing={finalIsEditing}
             isPending={isPending}
             isCurrentlyDecrypting={isCurrentlyDecrypting}
-            onDelete={onDelete}
+            onDelete={handleDelete}
             onEdit={onEdit}
           />
         )}

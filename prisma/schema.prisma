@@ -263,6 +263,7 @@ model Item {
   note_ct          String?
   totp_seed_ct     String?
   item_key_wrapped String
+  item_key_version String?    
   tags             String[]
   created_by       String     @db.ObjectId
   created_at       DateTime   @default(now())

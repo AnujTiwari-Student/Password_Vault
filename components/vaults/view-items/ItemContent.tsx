@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { APIVaultItem, DecryptedItemData } from '@/types/vault';
@@ -12,7 +11,6 @@ interface ItemContentProps {
   masterPassphrase: string | null;
   decryptedData: DecryptedItemData | null;
   isCurrentlyDecrypting: boolean;
-  isDeleting: boolean;
   isPending: boolean;
   onTogglePassword: () => void;
   onToggleTotp: () => void;
@@ -28,7 +26,6 @@ export const ItemContent: React.FC<ItemContentProps> = ({
   masterPassphrase,
   decryptedData,
   isCurrentlyDecrypting,
-  isDeleting,
   isPending,
   onTogglePassword,
   onToggleTotp,
@@ -70,7 +67,7 @@ export const ItemContent: React.FC<ItemContentProps> = ({
           label="Website"
           value={item.url}
           copyable
-          isDisabled={isDeleting || isPending}
+          isDisabled={isPending}
         />
       )}
 
@@ -81,7 +78,7 @@ export const ItemContent: React.FC<ItemContentProps> = ({
           isEncrypted
           decrypted={!!decryptedData}
           onCopy={() => onCopySensitive('username')}
-          isDisabled={isCurrentlyDecrypting || !decryptedData || isDeleting || isPending}
+          isDisabled={isCurrentlyDecrypting || !decryptedData || isPending}
         />
       )}
 
@@ -95,7 +92,7 @@ export const ItemContent: React.FC<ItemContentProps> = ({
           decrypted={!!decryptedData}
           onToggle={onTogglePassword}
           onCopy={() => onCopySensitive('password')}
-          isDisabled={isCurrentlyDecrypting || isDeleting || isPending}
+          isDisabled={isCurrentlyDecrypting || isPending}
           copyDisabled={!decryptedData}
         />
       )}
@@ -110,7 +107,7 @@ export const ItemContent: React.FC<ItemContentProps> = ({
           decrypted={!!decryptedData}
           onToggle={onToggleTotp}
           onCopy={() => onCopySensitive('totp_seed')}
-          isDisabled={isCurrentlyDecrypting || isDeleting || isPending}
+          isDisabled={isCurrentlyDecrypting || isPending}
           copyDisabled={!decryptedData}
         />
       )}
@@ -123,7 +120,7 @@ export const ItemContent: React.FC<ItemContentProps> = ({
           isNote
           decrypted={!!decryptedData}
           onViewSensitive={onViewSensitive}
-          isDisabled={isCurrentlyDecrypting || isDeleting || isPending}
+          isDisabled={isCurrentlyDecrypting || isPending}
         />
       )}
 

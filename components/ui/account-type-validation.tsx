@@ -58,7 +58,7 @@ function AccountTypeValidation({ setOrgName, setAccountType }: AccountSetupFormP
                                         </FormControl>
                                         <SelectContent className="bg-gray-800 border-gray-700">
                                             <SelectGroup>
-                                                <SelectItem value="org" className="text-white hover:bg-gray-700">Organization</SelectItem>
+                                                <SelectItem value="org" className="text-white hover:bg-gray-700">Organization &quot;Admin use only&quot;</SelectItem>
                                                 <SelectItem value="personal" className="text-white hover:bg-gray-700">Personal</SelectItem>
                                             </SelectGroup>
                                         </SelectContent>
