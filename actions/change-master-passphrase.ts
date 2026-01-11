@@ -48,8 +48,7 @@ export async function sendChangePassphraseOtp(): Promise<SendOtpResponse> {
     await sendEmail(user.email, "Change Master Passphrase - Verify Identity", emailTemplate);
 
     return { success: true, message: "OTP sent to your email" };
-  } catch (error) {
-    console.error("Error sending OTP:", error);
+  } catch {
     return { success: false, error: "Failed to send OTP" };
   }
 }
@@ -96,8 +95,7 @@ export async function verifyChangePassphraseOtp(otp: string): Promise<VerifyOtpR
       oldWrappedPrivateKey: wrappedPrivateKey,
       oldUmkSalt: userData?.umk_salt || null
     };
-  } catch (error) {
-    console.error("Error verifying OTP:", error);
+  } catch {
     return { success: false, error: "Failed to verify OTP" };
   }
 }
@@ -171,8 +169,7 @@ export async function changeMasterPassphrase(
     });
 
     return { success: true, message: "Master passphrase changed successfully" };
-  } catch (error) {
-    console.error("Error changing master passphrase:", error);
+  } catch {
     return { success: false, error: "Failed to change master passphrase" };
   }
 }

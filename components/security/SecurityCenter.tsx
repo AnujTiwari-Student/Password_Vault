@@ -1,4 +1,5 @@
 "use client";
+
 import React from "react";
 import { Key, Shield, Lock, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -8,6 +9,7 @@ import { useState as useStateHook, useTransition, useEffect } from "react";
 import { toast } from "sonner";
 import { toggle2FA } from "@/actions/toggle-2fa";
 import { ChangeMasterPassphraseModal } from "./ChangeMasterPassphraseModal";
+import { sendChangePassphraseOtp } from "@/actions/change-master-passphrase";
 
 export const SecurityCenter: React.FC = () => {
   const { data: session, update } = useSession();
@@ -34,12 +36,24 @@ export const SecurityCenter: React.FC = () => {
           setIs2FAEnabled(!checked);
           toast.error(result.error || "Failed to update 2FA settings");
         }
-      } catch (error) {
-        console.error("Error toggling 2FA:", error);
+      } catch {
         setIs2FAEnabled(!checked);
         toast.error("An unexpected error occurred");
       }
     });
+  };
+
+  const handleChangePassphraseClick = async () => {
+    try {
+      const result = await sendChangePassphraseOtp();
+      if (result.success) {
+        setShowChangePassphrase(true);
+      } else {
+        toast.error(result.error || "Failed to initiate passphrase change");
+      }
+    } catch {
+      toast.error("Failed to send verification code");
+    }
   };
 
   return (
@@ -96,7 +110,7 @@ export const SecurityCenter: React.FC = () => {
             </div>
 
             <button
-              onClick={() => setShowChangePassphrase(true)}
+              onClick={handleChangePassphraseClick}
               className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all hover:shadow-lg hover:shadow-blue-500/20 font-medium text-sm"
             >
               Change Master Passphrase
@@ -156,7 +170,7 @@ export const SecurityCenter: React.FC = () => {
                     ✓ Protected via Email code
                   </p>
                   <p className="text-green-400/70 text-xs mt-1">
-                    Youll receive a verification code on each login
+                    You will receive a verification code on each login
                   </p>
                 </div>
               ) : (
@@ -206,8 +220,7 @@ export const SecurityCenter: React.FC = () => {
           <li className="flex items-start gap-2">
             <span className="text-blue-400 mt-0.5">•</span>
             <span>
-              Use a unique, strong master passphrase that you dont use anywhere
-              else
+              Use a unique, strong master passphrase that you do not use anywhere else
             </span>
           </li>
           <li className="flex items-start gap-2">

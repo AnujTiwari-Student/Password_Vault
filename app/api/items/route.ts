@@ -63,7 +63,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ items }, { status: 200 });
   } catch (error) {
-    console.error("Items GET error:", error);
     return NextResponse.json(
       {
         message: "Internal Server Error",
@@ -221,8 +220,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log("✅ Item created successfully:", newItem.id);
-
     return NextResponse.json(
       {
         message: "Item created successfully",
@@ -231,7 +228,6 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("❌ Items POST error:", error);
     return NextResponse.json(
       {
         message: "Internal Server Error",
@@ -257,12 +253,6 @@ export async function PUT(req: NextRequest) {
       item_url,
       type,
       tags,
-      username_ct,
-      password_ct,
-      totp_seed_ct,
-      notes_ct,
-      item_key_wrapped,
-      item_key_version,
     } = body;
 
     if (!itemId) {
@@ -317,13 +307,6 @@ export async function PUT(req: NextRequest) {
           url: item_url,
           type: type,
           tags: tags,
-          username_ct: username_ct,
-          password_ct: password_ct,
-          totp_seed_ct: totp_seed_ct,
-          note_ct: notes_ct,
-          item_key_wrapped: item_key_wrapped || item.item_key_wrapped,
-          item_key_version:
-            item_key_version || item.item_key_version || BigInt(Date.now()),
           updated_at: new Date(),
         },
       });
@@ -351,7 +334,6 @@ export async function PUT(req: NextRequest) {
         },
       });
 
-      console.log("✅ Personal vault item updated:", itemId);
       return NextResponse.json(
         { message: "Item updated successfully", item: updatedItem },
         { status: 200 }
@@ -394,13 +376,6 @@ export async function PUT(req: NextRequest) {
           url: item_url,
           type: type,
           tags: parseTags(tags),
-          username_ct: username_ct,
-          password_ct: password_ct,
-          totp_seed_ct: totp_seed_ct,
-          note_ct: notes_ct,
-          item_key_wrapped: item_key_wrapped || item.item_key_wrapped,
-          item_key_version:
-            item_key_version?.toString() || Date.now().toString(),
           updated_at: new Date(),
         },
       });
@@ -431,7 +406,6 @@ export async function PUT(req: NextRequest) {
         },
       });
 
-      console.log("✅ Org vault item updated:", itemId);
       return NextResponse.json(
         { message: "Item updated successfully", item: updatedItem },
         { status: 200 }
@@ -443,7 +417,6 @@ export async function PUT(req: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Items PUT error:", error);
     return NextResponse.json(
       {
         message: "Internal Server Error",
@@ -536,7 +509,6 @@ export async function DELETE(req: NextRequest) {
         },
       });
 
-      console.log("✅ Personal vault item deleted:", itemId);
       return NextResponse.json(
         {
           message: "Item deleted successfully",
@@ -584,7 +556,6 @@ export async function DELETE(req: NextRequest) {
         },
       });
 
-      console.log("✅ Org vault item deleted by owner:", itemId);
       return NextResponse.json(
         {
           message: "Item deleted successfully",
@@ -600,7 +571,6 @@ export async function DELETE(req: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Items DELETE error:", error);
     return NextResponse.json(
       {
         message: "Internal Server Error",

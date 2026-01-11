@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2, Edit2 } from 'lucide-react';
 
 interface ItemActionsProps {
   isDeleting: boolean;
@@ -45,7 +45,7 @@ export const ItemActions: React.FC<ItemActionsProps> = ({
         )}
       </Button>
       
-      {/* <Button
+      <Button
         onClick={onEdit}
         disabled={isDisabled}
         className="bg-blue-600 hover:bg-blue-700 text-white transition-colors h-10 px-4"
@@ -61,7 +61,7 @@ export const ItemActions: React.FC<ItemActionsProps> = ({
             Edit
           </>
         )}
-      </Button> */}
+      </Button>
     </div>
   );
 };

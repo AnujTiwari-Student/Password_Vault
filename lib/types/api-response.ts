@@ -91,3 +91,35 @@ export enum ErrorCodes {
   INVITE_INVALID = 'INVITE_INVALID',
   INVITE_ALREADY_ACCEPTED = 'INVITE_ALREADY_ACCEPTED'
 }
+
+export enum ErrorCodes {
+  BAD_REQUEST = 'BAD_REQUEST',
+  CONFLICT = 'CONFLICT',
+  INVALID_TOKEN = 'INVALID_TOKEN',
+  EXPIRED_TOKEN = 'EXPIRED_TOKEN',
+  INVALID_OTP = 'INVALID_OTP',
+  EXPIRED_OTP = 'EXPIRED_OTP',
+}
+
+export interface APIResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: ErrorCodes;
+    message: string;
+    details?: Record<string, unknown>;
+  };
+  meta?: {
+    timestamp: string;
+    requestId?: string;
+  };
+}
+
+export interface PaginatedResponse<T> extends APIResponse<T> {
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

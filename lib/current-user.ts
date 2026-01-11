@@ -1,6 +1,5 @@
 import { auth } from "./auth";
 
-
 export const currentUser = async () => {
   try {
     const session = await auth();
@@ -11,15 +10,8 @@ export const currentUser = async () => {
 
     const user = session.user;
 
-    if (user && user.id) {
-    //   updateLastSeen(user.id).catch(error => {
-    //     console.error('Error updating last seen:', error);
-    //   });
-    }
-
     return user || null;
-  } catch (error) {
-    console.error('Error fetching current user:', error);
+  } catch {
     return null;
   }
 };

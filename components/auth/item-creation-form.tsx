@@ -136,47 +136,44 @@ function ItemCreationForm({
 
     startTransition(async () => {
       try {
-        const itemKeyRaw = new Uint8Array(generateRandomBytes(32));
-        const itemKeyBase64 = bufferToBase64(itemKeyRaw);
-
-        const itemKey = await crypto.subtle.importKey(
-          "raw",
-          itemKeyRaw,
-          "AES-GCM",
-          false,
-          ["encrypt"]
+        const itemKey = await crypto.subtle.generateKey(
+          { name: "AES-GCM", length: 256 },
+          true,
+          ["encrypt", "decrypt"]
         );
 
-        const secretsToEncrypt: Array<{
-          field: string;
-          value: string | undefined;
-        }> = [
-          { field: "username_ct", value: data.username_ct },
-          { field: "password_ct", value: data.password_ct },
-          { field: "totp_seed_ct", value: data.totp_seed_ct },
-          { field: "notes_ct", value: data.notes_ct },
-        ];
+        const encryptField = async (value: string): Promise<string> => {
+          const iv = generateRandomBytes(12);
+          const buffer = new TextEncoder().encode(value);
+          const ciphertextBuffer = await crypto.subtle.encrypt(
+            // @ts-expect-error -- FIX: iv.buffer converts Uint8Array to ArrayBuffer
+            { name: "AES-GCM", iv: iv },
+            itemKey,
+            buffer
+          );
+          const ivAndCiphertext = new Uint8Array(iv.length + ciphertextBuffer.byteLength);
+          ivAndCiphertext.set(iv, 0);
+          ivAndCiphertext.set(new Uint8Array(ciphertextBuffer), iv.length);
+          return bufferToBase64(ivAndCiphertext);
+        };
+
         const encryptedFields: Record<string, string> = {};
 
-        for (const secret of secretsToEncrypt) {
-          if (secret.value) {
-            const rawValue = secret.value;
-            const iv = new Uint8Array(generateRandomBytes(12));
-            const buffer = new TextEncoder().encode(rawValue);
-            const ciphertextBuffer = await crypto.subtle.encrypt(
-              { name: "AES-GCM", iv: iv },
-              itemKey,
-              buffer
-            );
-            const ivAndCiphertext = new Uint8Array(
-              iv.length + ciphertextBuffer.byteLength
-            );
-            ivAndCiphertext.set(iv, 0);
-            ivAndCiphertext.set(new Uint8Array(ciphertextBuffer), iv.length);
-            encryptedFields[secret.field] = bufferToBase64(ivAndCiphertext);
-          }
+        if (data.username_ct) {
+          encryptedFields.username_ct = await encryptField(data.username_ct);
+        }
+        if (data.password_ct) {
+          encryptedFields.password_ct = await encryptField(data.password_ct);
+        }
+        if (data.totp_seed_ct) {
+          encryptedFields.totp_seed_ct = await encryptField(data.totp_seed_ct);
+        }
+        if (data.notes_ct) {
+          encryptedFields.notes_ct = await encryptField(data.notes_ct);
         }
 
+        const itemKeyRaw = await crypto.subtle.exportKey("raw", itemKey);
+        const itemKeyBase64 = bufferToBase64(itemKeyRaw);
         const itemKeyWrapped = await wrapKey(itemKeyBase64, ovkCryptoKey);
 
         const payload = {
@@ -213,7 +210,7 @@ function ItemCreationForm({
         setError(errorMessage);
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    //  eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ovkCryptoKey, form, selectedTypes, tags.tags, mnemonic, effectiveVaultId, onSuccess, tags.setTagInput, tags.setTags]);
 
   return (

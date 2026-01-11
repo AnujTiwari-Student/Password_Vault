@@ -46,8 +46,7 @@ export async function GET() {
       wrapped_private_key: wrappedPrivateKey
     });
 
-  } catch (error) {
-    console.error("Get UMK salt error:", error);
+  } catch {
     return NextResponse.json({ error: "Failed to get UMK salt" }, { status: 500 });
   }
 }

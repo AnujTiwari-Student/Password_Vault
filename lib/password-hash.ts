@@ -1,6 +1,5 @@
 "use server";
 
-
 import argon2 from "argon2";
 
 export async function hashAuthPassword(password: string): Promise<string> {

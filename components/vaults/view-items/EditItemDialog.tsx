@@ -10,18 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { APIVaultItem } from '@/types/vault';
 
 interface FormData {
   name: string;
   url: string;
-  username: string;
-  password: string;
-  totp_seed: string;
-  note: string;
 }
 
 interface EditItemDialogProps {
@@ -44,25 +39,21 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
   const [formData, setFormData] = useState<FormData>({
     name: '',
     url: '',
-    username: '',
-    password: '',
-    totp_seed: '',
-    note: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
+  const [initialData, setInitialData] = useState<FormData | null>(null);
+
+  console.log('Decrypted Data:', decryptedData);
 
   useEffect(() => {
-    if (decryptedData) {
-      setFormData({
-        name: decryptedData.name || item.name || '',
-        url: decryptedData.url || item.url || '',
-        username: decryptedData.username || '',
-        password: decryptedData.password || '',
-        totp_seed: decryptedData.totp_seed || '',
-        note: decryptedData.note || '',
-      });
+    if (isOpen) {
+      const initial = {
+        name: item.name || '',
+        url: item.url || '',
+      };
+      setFormData(initial);
+      setInitialData(initial);
     }
-  }, [decryptedData, item]);
+  }, [item, isOpen]);
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({
@@ -73,19 +64,26 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!initialData) return;
+
     const updatedData: Partial<FormData> = {};
     
-    if (formData.name !== item.name) updatedData.name = formData.name;
-    if (formData.url !== item.url) updatedData.url = formData.url || '';
-    if (formData.username !== decryptedData?.username) updatedData.username = formData.username;
-    if (formData.password !== decryptedData?.password) updatedData.password = formData.password;
-    if (formData.totp_seed !== decryptedData?.totp_seed) updatedData.totp_seed = formData.totp_seed;
-    if (formData.note !== decryptedData?.note) updatedData.note = formData.note;
+    if (formData.name !== initialData.name) updatedData.name = formData.name;
+    if (formData.url !== initialData.url) updatedData.url = formData.url;
+
+    if (Object.keys(updatedData).length === 0) {
+      onClose();
+      return;
+    }
 
     onSave(updatedData);
   };
 
   const handleCancel = () => {
+    if (initialData) {
+      setFormData(initialData);
+    }
     onClose();
   };
 
@@ -94,8 +92,17 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
       <DialogContent className="max-w-2xl bg-gray-800 border-gray-700 text-white">
         <DialogHeader>
           <DialogTitle>Edit Item: {item.name}</DialogTitle>
-          <DialogDescription>Update the details for this vault item</DialogDescription>
+          <DialogDescription>Update the name and URL for this vault item</DialogDescription>
         </DialogHeader>
+
+        <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-3 mb-4">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+            <p className="text-blue-300 text-sm">
+              Currently only name and URL can be edited. To change encrypted fields (password, username, etc.), please create a new item.
+            </p>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
@@ -106,6 +113,7 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
               onChange={(e) => handleChange('name', e.target.value)}
               className="bg-gray-900 border-gray-700 text-white focus:border-blue-500"
               disabled={isEditing}
+              required
             />
           </div>
 
@@ -117,71 +125,9 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
               onChange={(e) => handleChange('url', e.target.value)}
               className="bg-gray-900 border-gray-700 text-white focus:border-blue-500"
               disabled={isEditing}
+              placeholder="https://example.com"
             />
           </div>
-
-          {item.username_ct && (
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={formData.username}
-                onChange={(e) => handleChange('username', e.target.value)}
-                className="bg-gray-900 border-gray-700 text-white focus:border-blue-500"
-                disabled={isEditing}
-              />
-            </div>
-          )}
-
-          {item.password_ct && (
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleChange('password', e.target.value)}
-                  className="bg-gray-900 border-gray-700 text-white focus:border-blue-500 pr-12"
-                  disabled={isEditing}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
-                  disabled={isEditing}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {item.totp_seed_ct && (
-            <div className="space-y-2">
-              <Label htmlFor="totp_seed">TOTP Secret</Label>
-              <Input
-                id="totp_seed"
-                value={formData.totp_seed}
-                onChange={(e) => handleChange('totp_seed', e.target.value)}
-                className="bg-gray-900 border-gray-700 text-white focus:border-blue-500 font-mono"
-                disabled={isEditing}
-              />
-            </div>
-          )}
-
-          {item.note_ct && (
-            <div className="space-y-2">
-              <Label htmlFor="note">Note</Label>
-              <Textarea
-                id="note"
-                value={formData.note}
-                onChange={(e) => handleChange('note', e.target.value)}
-                className="bg-gray-900 border-gray-700 text-white focus:border-blue-500 min-h-[120px]"
-                disabled={isEditing}
-              />
-            </div>
-          )}
 
           <DialogFooter className="gap-2 pt-4">
             <Button

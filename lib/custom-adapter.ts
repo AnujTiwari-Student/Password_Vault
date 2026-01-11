@@ -49,7 +49,6 @@ export const CustomOAuthAdapter = (db: PrismaClient) => {
           account_type: newUser.account_type,
         } as ExtendedAdapterUser;
       } catch (error) {
-        console.error(`Error creating user via OAuth for ${user.email}:`, error);
         throw error;
       }
     },

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { APIVaultItem } from "@/types/vault";
 import { MasterPassphraseModal } from "./PassphraseModal";
@@ -40,6 +40,9 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [hasAttemptedDecrypt, setHasAttemptedDecrypt] = useState(false);
+
+  const toastShownRef = useRef<Set<string>>(new Set());
 
   const vaultId = vaultType === "personal" ? user?.vault?.id : item?.vault_id || null;
 
@@ -50,16 +53,49 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
   const decryptedData = item ? getDecryptedItem(item.id) : null;
   const isCurrentlyDecrypting = item ? isDecrypting(item.id) : false;
 
-  useEffect(() => {
-    if (item && ovkCryptoKey && masterPassphrase && !decryptedData && !isCurrentlyDecrypting) {
-      decryptItem(item);
+  const showToastOnce = useCallback((key: string, type: 'success' | 'error', message: string) => {
+    if (!toastShownRef.current.has(key)) {
+      toastShownRef.current.add(key);
+      if (type === 'success') {
+        toast.success(message);
+      } else {
+        toast.error(message);
+      }
+      setTimeout(() => {
+        toastShownRef.current.delete(key);
+      }, 3000);
     }
-  }, [item, ovkCryptoKey, masterPassphrase, decryptedData, isCurrentlyDecrypting, decryptItem]);
+  }, []);
+
+  useEffect(() => {
+    const attemptDecryption = async () => {
+      if (item && ovkCryptoKey && masterPassphrase && !decryptedData && !isCurrentlyDecrypting && !hasAttemptedDecrypt) {
+        setHasAttemptedDecrypt(true);
+        try {
+          await decryptItem(item);
+          showToastOnce(`decrypt-success-${item.id}`, 'success', 'Item decrypted successfully');
+        } catch (error) {
+          console.error('Failed to decrypt item:', error);
+          showToastOnce(`decrypt-error-${item.id}`, 'error', 'Failed to decrypt item - invalid passphrase');
+          setMasterPassphrase(null);
+        }
+      }
+    };
+
+    attemptDecryption();
+  }, [item, ovkCryptoKey, masterPassphrase, decryptedData, isCurrentlyDecrypting, hasAttemptedDecrypt, decryptItem, showToastOnce]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHasAttemptedDecrypt(false);
+    }
+  }, [isOpen]);
 
   if (!item) return null;
 
   const handleVerifyPassphrase = async (passphrase: string): Promise<boolean> => {
     setMasterPassphrase(passphrase);
+    setHasAttemptedDecrypt(false);
     return true;
   };
 
@@ -79,7 +115,7 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
     const value = data[field] || '';
     if (value) {
       navigator.clipboard.writeText(value);
-      toast.success(`${field} copied to clipboard`);
+      showToastOnce(`copy-${field}`, 'success', `${field} copied to clipboard`);
     }
   };
 
@@ -87,6 +123,8 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
     setShowPassword(false);
     setShowTotp(false);
     setMasterPassphrase(null);
+    setHasAttemptedDecrypt(false);
+    toastShownRef.current.clear();
     onClose();
   };
 
@@ -99,8 +137,13 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
     try {
       const response = await fetch(`/api/items?id=${item.id}`, { method: "DELETE" });
       if (response.ok) {
+        showToastOnce('delete-success', 'success', 'Item deleted successfully');
         onClose();
+      } else {
+        showToastOnce('delete-error', 'error', 'Failed to delete item');
       }
+    } catch {
+      showToastOnce('delete-network-error', 'error', 'Network error');
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
@@ -110,7 +153,7 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
   const handleEditClick = () => {
     if (!decryptedData) {
       setShowMasterPassphraseModal(true);
-      toast.error("Please unlock the item first to edit");
+      showToastOnce('edit-locked', 'error', "Please unlock the item first to edit");
       return;
     }
     setShowEditDialog(true);
@@ -118,7 +161,7 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
 
   const handleEditSave = async (updatedData: Record<string, string>) => {
     if (!ovkCryptoKey || !decryptedData) {
-      toast.error("Missing encryption keys");
+      showToastOnce('edit-no-keys', 'error', "Missing encryption keys");
       return;
     }
 
@@ -143,16 +186,15 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
       });
 
       if (response.ok) {
-        toast.success("Item updated successfully!");
+        showToastOnce('edit-success', 'success', "Item updated successfully!");
         setShowEditDialog(false);
         onClose();
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || "Failed to update");
+        showToastOnce('edit-error', 'error', errorData.message || "Failed to update");
       }
-    } catch (error) {
-      console.error("Update failed:", error);
-      toast.error("Update failed");
+    } catch {
+      showToastOnce('edit-network-error', 'error', "Update failed");
     } finally {
       setIsEditing(false);
       setIsPending(false);
@@ -210,9 +252,10 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
       <EditItemDialog
         isOpen={showEditDialog}
         onClose={() => setShowEditDialog(false)}
+        // @ts-expect-error onSave is a required prop
         onSave={handleEditSave}
         item={item}
-        // @ts-expect-error -- FIX: TypeScript error --- IGNORE ---
+        // @ts-expect-error decryptedData is ensured to be present before opening the edit dialog
         decryptedData={decryptedData}
         isEditing={isEditing}
       />

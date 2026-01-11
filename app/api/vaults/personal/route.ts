@@ -51,11 +51,9 @@ export async function GET(req: NextRequest) {
       vault_name: vault.name
     }, { status: 200 });
 
-  } catch (error) {
-    console.error('Error fetching personal vault OVK:', error);
+  } catch {
     return NextResponse.json({ 
-      error: 'Internal Server Error',
-      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+      error: 'Internal Server Error'
     }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useCallback } from "react";
+
+import React, { useState, useCallback, useRef } from "react";
 import {
   Check,
   KeyRound,
@@ -25,8 +26,16 @@ import { useClipboard } from "@/hooks/useClipboard";
 import {
   deriveUMKData,
   generateMnemonicPassphrase,
+  unwrapKey,
+  wrapKey,
+  bufferToBase64,
 } from "@/utils/client-crypto";
 import { useSession } from "next-auth/react";
+import { 
+  sendChangePassphraseOtp, 
+  verifyChangePassphraseOtp,
+  changeMasterPassphrase 
+} from "@/actions/change-master-passphrase";
 
 interface ChangeMasterPassphraseModalProps {
   isOpen: boolean;
@@ -34,23 +43,46 @@ interface ChangeMasterPassphraseModalProps {
   onSuccess: () => void;
 }
 
+type ModalStep = "alert" | "otp" | "verify_old" | "newkey" | "processing";
+
 export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
 }) => {
   const { update } = useSession();
-  const [step, setStep] = useState<"alert" | "otp" | "newkey" | "success">("alert");
+  const [step, setStep] = useState<ModalStep>("alert");
   const [otp, setOtp] = useState("");
+  const [oldMnemonic, setOldMnemonic] = useState("");
   const [otpError, setOtpError] = useState("");
+  const [oldMnemonicError, setOldMnemonicError] = useState("");
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isVerifyingOldMnemonic, setIsVerifyingOldMnemonic] = useState(false);
   const [mnemonic, setMnemonic] = useState<string | null>(null);
   const [salt, setSalt] = useState<string | null>(null);
   const [verifier, setVerifier] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState("");
   const [showKey, setShowKey] = useState(true);
-  const {isCopied, copy} = useClipboard({ successDuration: 100000 });
+  const [oldWrappedPrivateKey, setOldWrappedPrivateKey] = useState<string | null>(null);
+  const [oldUmkSalt, setOldUmkSalt] = useState<string | null>(null);
+  const { isCopied, copy } = useClipboard({ successDuration: 100000 });
+  
+  const toastShownRef = useRef<Set<string>>(new Set());
+
+  const showToastOnce = useCallback((key: string, type: 'success' | 'error', message: string) => {
+    if (!toastShownRef.current.has(key)) {
+      toastShownRef.current.add(key);
+      if (type === 'success') {
+        toast.success(message);
+      } else {
+        toast.error(message);
+      }
+      setTimeout(() => {
+        toastShownRef.current.delete(key);
+      }, 3000);
+    }
+  }, []);
 
   const runGenerateNewKey = useCallback(async () => {
     setStatus("Generating new Master Key...");
@@ -62,94 +94,149 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
       setSalt(umkData.umk_salt);
       setVerifier(umkData.master_passphrase_verifier);
       setStatus("New Master Key ready. Please copy it securely.");
-    } catch (error) {
+    } catch {
       setStatus("Error generating new key");
-      console.error(error);
+      showToastOnce('gen-key-error', 'error', "Failed to generate new master key");
     }
-  }, []);
+  }, [showToastOnce]);
 
-  const handleVerifyOtp = async () => {
+  const handleSendOtp = useCallback(async () => {
+    setIsVerifyingOtp(true);
+    setOtpError("");
+    
+    try {
+      const result = await sendChangePassphraseOtp();
+      
+      if (result.success) {
+        setStep("otp");
+        showToastOnce('otp-sent', 'success', "OTP sent to your email");
+      } else {
+        setOtpError(result.error || "Failed to send OTP");
+        showToastOnce('otp-send-error', 'error', result.error || "Failed to send OTP");
+      }
+    } catch {
+      setOtpError("Network error. Please try again.");
+      showToastOnce('otp-network-error', 'error', "Network error. Please try again.");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  }, [showToastOnce]);
+
+  const handleVerifyOtp = useCallback(async () => {
     if (!otp.trim()) return;
     setIsVerifyingOtp(true);
     setOtpError("");
     
     try {
-      const response = await fetch("/api/auth/verify-change-passphrase-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otp: otp.trim() }),
-      });
-
-      const data = await response.json();
+      const data = await verifyChangePassphraseOtp(otp.trim());
       
-      if (response.ok && data.success) {
-        await runGenerateNewKey();
-        setStep("newkey");
+      if (data.success) {
+        setOldWrappedPrivateKey(data.oldWrappedPrivateKey || null);
+        setOldUmkSalt(data.oldUmkSalt || null);
+        setStep("verify_old");
+        showToastOnce('otp-verified', 'success', "OTP verified successfully");
       } else {
         setOtpError(data.error || "Invalid OTP");
       }
-    } catch (error) {
-      console.error("Error verifying OTP:", error);
+    } catch {
       setOtpError("Network error. Please try again.");
     } finally {
       setIsVerifyingOtp(false);
     }
-  };
+  }, [otp, showToastOnce]);
 
-  const handleCopyKey = () => {
-    if (mnemonic) {
-      copy(mnemonic);
-      toast.success("Master Key copied!");
+  const handleVerifyOldMnemonic = useCallback(async () => {
+    if (!oldMnemonic.trim()) return;
+    if (!oldUmkSalt || !oldWrappedPrivateKey) {
+      setOldMnemonicError("Missing old encryption data");
+      return;
     }
-  };
 
-  const handleConfirmNewKey = async () => {
-    if (!mnemonic || !salt || !verifier || isProcessing || !isCopied) return;
-
-    setIsProcessing(true);
-    setStatus("Updating your account with new Master Key...");
+    setIsVerifyingOldMnemonic(true);
+    setOldMnemonicError("");
 
     try {
-      const response = await fetch("/api/auth/change-master-passphrase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          umk_salt: salt,
-          master_passphrase_verifier: verifier,
-        }),
-      });
+      const oldUmkData = await deriveUMKData(oldMnemonic.trim(), oldUmkSalt);
+      
+      await unwrapKey(oldWrappedPrivateKey, oldUmkData.umkCryptoKey);
+      
+      await runGenerateNewKey();
+      setStep("newkey");
+      showToastOnce('old-verified', 'success', "Old passphrase verified successfully");
+    } catch {
+      setOldMnemonicError("Invalid master passphrase");
+      showToastOnce('old-invalid', 'error', "Invalid master passphrase");
+    } finally {
+      setIsVerifyingOldMnemonic(false);
+    }
+  }, [oldMnemonic, oldUmkSalt, oldWrappedPrivateKey, runGenerateNewKey, showToastOnce]);
 
-      const data = await response.json();
+  const handleCopyKey = useCallback(() => {
+    if (mnemonic) {
+      copy(mnemonic);
+      showToastOnce('key-copied', 'success', "Master Key copied!");
+    }
+  }, [mnemonic, copy, showToastOnce]);
 
-      if (response.ok && data.success) {
+  const handleConfirmNewKey = useCallback(async () => {
+    if (!mnemonic || !salt || !verifier || isProcessing || !isCopied) return;
+    if (!oldMnemonic || !oldUmkSalt || !oldWrappedPrivateKey) {
+      showToastOnce('missing-data', 'error', "Missing old passphrase data");
+      return;
+    }
+
+    setIsProcessing(true);
+    setStatus("Re-encrypting your private key...");
+    setStep("processing");
+
+    try {
+      const oldUmkData = await deriveUMKData(oldMnemonic.trim(), oldUmkSalt);
+      const privateKeyCrypto = await unwrapKey(oldWrappedPrivateKey, oldUmkData.umkCryptoKey);
+      
+      const privateKeyBuffer = await window.crypto.subtle.exportKey("pkcs8", privateKeyCrypto);
+      const privateKeyBase64 = bufferToBase64(privateKeyBuffer);
+
+      const newUmkData = await deriveUMKData(mnemonic, salt);
+      const newWrappedPrivateKey = await wrapKey(privateKeyBase64, newUmkData.umkCryptoKey);
+
+      setStatus("Updating your account...");
+      const result = await changeMasterPassphrase(salt, verifier, newWrappedPrivateKey);
+
+      if (result.success) {
         setStatus("Master Passphrase changed successfully!");
-        toast.success("Master Passphrase updated successfully!");
+        showToastOnce('passphrase-changed', 'success', "Master Passphrase updated successfully!");
         await update();
         onSuccess();
         setTimeout(() => onClose(), 2000);
       } else {
-        setStatus(data.error || "Failed to update passphrase");
-        toast.error(data.error || "Failed to update passphrase");
+        setStatus(result.error || "Failed to update passphrase");
+        showToastOnce('passphrase-error', 'error', result.error || "Failed to update passphrase");
+        setStep("newkey");
       }
-    } catch (error) {
-      console.error("Error updating passphrase:", error);
-      setStatus("Network error during update");
-      toast.error("Update failed");
+    } catch {
+      setStatus("Failed to re-encrypt private key");
+      showToastOnce('reencrypt-error', 'error', "Update failed");
+      setStep("newkey");
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [mnemonic, salt, verifier, isProcessing, isCopied, oldMnemonic, oldUmkSalt, oldWrappedPrivateKey, update, onSuccess, onClose, showToastOnce]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setStep("alert");
     setOtp("");
+    setOldMnemonic("");
     setOtpError("");
+    setOldMnemonicError("");
     setMnemonic(null);
     setSalt(null);
     setVerifier(null);
     setStatus("");
+    setOldWrappedPrivateKey(null);
+    setOldUmkSalt(null);
+    toastShownRef.current.clear();
     onClose();
-  };
+  }, [onClose]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -158,13 +245,16 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
           <DialogTitle className="text-2xl font-bold">
             {step === "alert" && "Change Master Passphrase"}
             {step === "otp" && "Verify Identity"}
+            {step === "verify_old" && "Verify Old Master Key"}
             {step === "newkey" && "New Master Key Generated"}
-            {step === "success" && "Success!"}
+            {step === "processing" && "Processing..."}
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            {step === "alert" && "This will generate a completely new Master Key. Your existing encrypted data will need to be re-encrypted."}
+            {step === "alert" && "This will generate a completely new Master Key. Your private key will be re-encrypted."}
             {step === "otp" && "Enter the 6-digit code sent to your email to continue."}
+            {step === "verify_old" && "Enter your current master passphrase to decrypt your private key."}
             {step === "newkey" && "Copy and securely store your new Master Key. This is the ONLY way to access your encrypted data."}
+            {step === "processing" && "Please wait while we update your account..."}
           </DialogDescription>
         </DialogHeader>
 
@@ -173,10 +263,10 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
             <div className="text-center py-8">
               <AlertCircle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
               <p className="text-gray-300 text-lg font-semibold mb-2">
-                ⚠️ Warning: Irreversible Action
+                ⚠️ Warning: Secure Process
               </p>
               <p className="text-gray-400 text-sm max-w-md mx-auto">
-                This will invalidate all your current encryption keys. You will need to re-encrypt all vault items with the new Master Key.
+                We will verify your identity, then re-encrypt your private key with the new master passphrase. Your vault data remains secure throughout this process.
               </p>
               <div className="flex gap-3 mt-6 justify-center">
                 <Button 
@@ -187,10 +277,18 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
                   Cancel
                 </Button>
                 <Button 
-                  onClick={() => setStep("otp")}
+                  onClick={handleSendOtp}
+                  disabled={isVerifyingOtp}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  Continue
+                  {isVerifyingOtp ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Continue"
+                  )}
                 </Button>
               </div>
             </div>
@@ -235,6 +333,49 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
                     </>
                   ) : (
                     "Verify OTP"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === "verify_old" && (
+            <div className="max-w-md mx-auto">
+              <div className="text-center mb-6">
+                <KeyRound className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+                <p className="text-gray-300 text-sm">Enter your current master passphrase</p>
+              </div>
+              
+              {oldMnemonicError && (
+                <div className="bg-red-900/20 border border-red-700/30 rounded-lg p-3 mb-4">
+                  <p className="text-red-300 text-sm">{oldMnemonicError}</p>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-300 mb-2 block">
+                    Current Master Passphrase (24 words)
+                  </Label>
+                  <textarea
+                    value={oldMnemonic}
+                    onChange={(e) => setOldMnemonic(e.target.value)}
+                    className="w-full bg-gray-800 border-gray-600 text-white focus:border-blue-500 rounded-lg p-3 font-mono text-sm min-h-[120px] resize-none"
+                    placeholder="Enter your 24-word master passphrase..."
+                  />
+                </div>
+                <Button
+                  onClick={handleVerifyOldMnemonic}
+                  disabled={!oldMnemonic.trim() || isVerifyingOldMnemonic}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  {isVerifyingOldMnemonic ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    "Verify & Generate New Key"
                   )}
                 </Button>
               </div>
@@ -331,6 +472,18 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
                   <p className="text-xs text-gray-300 text-center">{status}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {step === "processing" && (
+            <div className="text-center py-8">
+              <Loader2 className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-spin" />
+              <p className="text-gray-300 text-lg font-semibold mb-2">
+                {status || "Processing your request..."}
+              </p>
+              <p className="text-gray-400 text-sm max-w-md mx-auto">
+                Please do not close this window
+              </p>
             </div>
           )}
         </div>

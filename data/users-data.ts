@@ -1,12 +1,11 @@
 import { prisma } from "@/db";
 
-
 export const getUserByEmail = async (email: string) => {
-    const user = await prisma.user.findFirst({
-        where: { email }
-    });
-    return user;
-}
+  const user = await prisma.user.findFirst({
+    where: { email }
+  });
+  return user;
+};
 
 export async function getUserByEmailWithAccounts(email: string) {
   try {
@@ -22,17 +21,16 @@ export async function getUserByEmailWithAccounts(email: string) {
       }
     });
     return user;
-  } catch (error) {
-    console.error("Error fetching user by email with accounts:", error);
+  } catch {
     return null;
   }
 }
 
 export const getUserById = async (id: string) => {
-    return prisma.user.findUnique({
-        where: { id }
-    });
-}
+  return prisma.user.findUnique({
+    where: { id }
+  });
+};
 
 export const updateUser = async (id: string) => {
   try {
@@ -44,8 +42,7 @@ export const updateUser = async (id: string) => {
       },
     });
     return user;
-  } catch (error) {
-    console.error("Error updating user:", error);
+  } catch {
     return null;
   }
 };
