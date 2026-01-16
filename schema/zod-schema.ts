@@ -125,3 +125,21 @@ export const CreateOrgSchema = z.object({
 });
 
 export type CreateOrgSchemaType = z.infer<typeof CreateOrgSchema>;
+
+export const PaymentSchema = z.object({
+  planId: z.string(),
+  billingCycle: z.enum(['monthly', 'yearly']),
+  amount: z.number().int().positive(),
+  currency: z.string().default('INR'),
+  plan: z.string(),
+  vaultId: z.string(),
+  vaultType: z.string(),
+})
+
+export const RazorpaySchema = z.object({
+  orderId: z.string().min(1, "Order ID is required"),
+  paymentId: z.string().min(1, "Payment ID is required"),
+  signature: z.string().min(1, "Signature is required"),
+});
+
+export type RazorpayType = z.infer<typeof RazorpaySchema>;

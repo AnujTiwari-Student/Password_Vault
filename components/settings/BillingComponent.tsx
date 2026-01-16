@@ -5,7 +5,6 @@ import { Loader2, Package } from "lucide-react";
 import { User } from "@/types/vault";
 import { PlanType } from "@/types/billing";
 import { toast } from "sonner";
-import { getSubscriptionDetails } from "@/actions/stripe-action";
 import { CurrentPlanCard } from "../billing/CurrentPlanCard";
 import { BillingCycleToggle } from "../billing/BillingCycleToggle";
 import { PlanCards } from "../billing/PlanCards";
@@ -14,10 +13,19 @@ import { BillingManagement } from "../billing/BillingManagement";
 import { ManageSubscriptionModal } from "../billing/ManageSubscriptionModal";
 import { BillingData } from "../billing/types";
 import { personalPlans, orgPlans } from "../billing/plansConfig";
+import axios from "axios";
 
 interface BillingComponentProps {
   user: User;
 }
+
+const PLAN_ID_MAP: Record<string, PlanType> = {
+  'basic': 'free',
+  'professional': 'pro',
+  'enterprise': 'enterprise',
+  'free': 'free',
+  'pro': 'pro',
+};
 
 export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
@@ -27,32 +35,54 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
 
   const isOrgVault = user.vault?.type === "org";
   const vaultId = user.vault?.id;
+  const userId = user.id;
 
   useEffect(() => {
     const fetchBillingData = async () => {
-      if (!vaultId) {
+      if (!vaultId || !userId) {
         setIsLoadingBilling(false);
         return;
       }
 
       try {
-        const data = await getSubscriptionDetails();
-        setBillingData(data as BillingData);
-        if (data.billingCycle) {
-          setBillingCycle(data.billingCycle as "monthly" | "yearly");
+        const response = await axios.get(`/api/subscription/details?vaultId=${vaultId}&userId=${userId}`);
+        const data = response.data;
+        
+        if (data.subscription) {
+          const mappedPlan = PLAN_ID_MAP[data.subscription.plan] || data.subscription.plan;
+          
+          setBillingData({
+            plan: mappedPlan,
+            status: data.subscription.status,
+            amount: data.subscription.amount,
+            currency: data.subscription.currency || 'INR',
+            billingCycle: data.subscription.billing_cycle === 'annually' ? 'yearly' : 'monthly',
+            nextBillingDate: data.subscription.next_billing_date,
+            paymentMethod: data.subscription.payment_method || 'Razorpay',
+            cancelAtPeriodEnd: data.subscription.status === 'cancelled',
+          });
+          
+          if (data.subscription.billing_cycle) {
+            setBillingCycle(data.subscription.billing_cycle === 'annually' ? 'yearly' : 'monthly');
+          }
+        } else {
+          setBillingData(null);
         }
       } catch (error: unknown) {
         console.error("Failed to fetch billing data:", error);
-        toast.error("Failed to load billing information");
+        if (axios.isAxiosError(error) && error.response?.status !== 404) {
+          toast.error("Failed to load billing information");
+        }
       } finally {
         setIsLoadingBilling(false);
       }
     };
 
     fetchBillingData();
-  }, [vaultId]);
+  }, [vaultId, userId]);
 
-  const currentPlan: PlanType = (billingData?.plan as PlanType) || "free";
+  // @ts-expect-error --- IGNORE ---
+  const currentPlan: PlanType = billingData?.plan || user.plan_type || "free";
   const plans = isOrgVault ? orgPlans : personalPlans;
 
   if (isLoadingBilling) {
@@ -68,7 +98,6 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2.5 bg-blue-500/10 rounded-lg">
@@ -81,7 +110,6 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
         </p>
       </div>
 
-      {/* Current Plan Card */}
       <CurrentPlanCard
         currentPlan={currentPlan}
         billingData={billingData}
@@ -89,13 +117,11 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
         plans={plans}
       />
 
-      {/* Billing Cycle Toggle */}
       <BillingCycleToggle
         billingCycle={billingCycle}
         setBillingCycle={setBillingCycle}
       />
 
-      {/* Plan Cards */}
       <PlanCards
         plans={plans}
         currentPlan={currentPlan}
@@ -103,24 +129,27 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
         user={user}
       />
 
-      {/* Plan Comparison Table */}
       <PlanComparisonTable plans={plans} isOrgVault={isOrgVault} />
 
-      {/* Billing Management (Invoice & Manage Subscription) */}
-      {currentPlan !== "free" && (
+      {currentPlan !== "free" && vaultId && userId && (
         <BillingManagement
           onManageClick={() => setIsManageModalOpen(true)}
+          vaultId={vaultId}
+          userId={userId}
         />
       )}
 
-      {/* Manage Subscription Modal */}
-      <ManageSubscriptionModal
-        isOpen={isManageModalOpen}
-        onClose={() => setIsManageModalOpen(false)}
-        billingData={billingData}
-        currentPlan={currentPlan}
-        plans={plans}
-      />
+      {vaultId && userId && (
+        <ManageSubscriptionModal
+          isOpen={isManageModalOpen}
+          onClose={() => setIsManageModalOpen(false)}
+          billingData={billingData}
+          currentPlan={currentPlan}
+          plans={plans}
+          vaultId={vaultId}
+          userId={userId}
+        />
+      )}
     </div>
   );
 };

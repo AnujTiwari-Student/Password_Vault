@@ -3,7 +3,8 @@ import { Check, Loader2, Shield } from "lucide-react";
 import { User } from "@/types/vault";
 import { BillingPlan, PlanType } from "./types";
 import { toast } from "sonner";
-import { createStripeCheckoutSession } from "@/actions/stripe-action";
+import axios from "axios";
+import { VerifyPaymentRequest } from "@/app/api/razorpay/verify/route";
 
 interface PlanCardsProps {
   plans: BillingPlan[];
@@ -11,6 +12,14 @@ interface PlanCardsProps {
   billingCycle: "monthly" | "yearly";
   user: User;
 }
+
+const PLAN_ID_MAP: Record<string, string> = {
+  'free': 'basic',
+  'basic': 'basic',
+  'pro': 'professional',
+  'professional': 'professional',
+  'enterprise': 'enterprise',
+};
 
 export const PlanCards: React.FC<PlanCardsProps> = ({
   plans,
@@ -20,47 +29,191 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
 }) => {
   const [loading, setLoading] = useState<string | null>(null);
 
-  const hasActivePaidPlan = currentPlan !== "free";
+  // @ts-expect-error -- Razorpay is loaded globally ---> globalThis.Razorpay
+  const hasActivePaidPlan = currentPlan !== "free" && currentPlan !== "basic";
 
   const handleUpgrade = async (planId: PlanType): Promise<void> => {
+    console.log("=== handleUpgrade called ===");
+    console.log("Plan ID:", planId);
+    console.log("User object:", user);
+    console.log("User vault:", user.vault);
+    
     if (hasActivePaidPlan) {
       toast.info("Please use the Manage Subscription portal to change your plan.");
       return;
     }
 
-    if (planId === "free") {
+    // @ts-expect-error -- Razorpay is loaded globally ---
+    if (planId === "free" || planId === "basic") {
       toast.info("Cannot select free plan.");
       return;
     }
 
+    const backendPlanId = PLAN_ID_MAP[planId.toLowerCase()] || planId;
+    console.log("Mapped plan ID:", backendPlanId);
+
+    if (!user.vault?.id) {
+      console.error("User has no vault!");
+      toast.error("No vault found. Please create a vault first.");
+      return;
+    }
+
+    let vaultType: 'org' | 'personal' = 'personal';
+    
+    if (user.vault.type) {
+      vaultType = user.vault.type === 'org' ? 'org' : 'personal';
+    }
+    
+    console.log("Vault type determined:", vaultType);
+
     setLoading(planId);
+    
     try {
-      const result = await createStripeCheckoutSession({
-        planId,
+      const selectedPlan = plans.find(p => p.id === planId);
+      if (!selectedPlan) {
+        throw new Error("Plan not found");
+      }
+
+      const amount = billingCycle === "yearly" 
+        ? selectedPlan.price.yearly 
+        : selectedPlan.price.monthly;
+
+      console.log("Selected plan:", selectedPlan);
+      console.log("Amount:", amount);
+
+      const orderPayload = {
+        planId: backendPlanId,
         billingCycle,
-        vaultId: user.vault?.id || "",
-        vaultType: user.vault?.type || "personal",
-      });
+        vaultId: user.vault.id,
+        vaultType: vaultType, 
+      };
+
+      console.log("Creating Razorpay order with payload:", orderPayload);
+
+      const result = await axios.post('/api/razorpay', orderPayload)
+        .then(res => {
+          console.log("✓ Razorpay order created:", res.data);
+          return res.data;
+        })
+        .catch(err => {
+          console.error("✗ Razorpay order creation failed");
+          console.error("Status:", err.response?.status);
+          console.error("Error data:", err.response?.data);
+          throw err;
+        });
 
       if (result.error) {
         throw new Error(result.error);
       }
 
-      if (result.success && result.message) {
-        toast.success(result.message);
-        setTimeout(() => window.location.reload(), 2000);
-        return;
+      if (!result.success || !result.order) {
+        throw new Error("Failed to create payment order");
       }
 
-      if (result.url) {
-        window.location.href = result.url;
+      console.log("Opening Razorpay checkout...");
+
+      if (typeof window.Razorpay === 'undefined') {
+        throw new Error("Razorpay SDK not loaded. Please refresh the page.");
       }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: result.order.amount,
+        currency: result.order.currency,
+        name: "Your Company Name",
+        description: `${selectedPlan.name} - ${billingCycle} subscription`,
+        order_id: result.order.id,
+        handler: async function (response: VerifyPaymentRequest) {
+          console.log("=== Payment successful ===");
+          console.log("Razorpay response:", response);
+          
+          try {
+            const verifyPayload = {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              planId: backendPlanId, 
+              billingCycle,
+              vaultId: user.vault!.id,
+              vaultType: vaultType, 
+              amount: result.order.amount,
+            };
+
+            console.log("Verifying payment with payload:", verifyPayload);
+
+            const verifyResult = await axios.post('/api/razorpay/verify', verifyPayload)
+              .then(res => {
+                console.log("✓ Payment verified:", res.data);
+                return res.data;
+              })
+              .catch(err => {
+                console.error("✗ Payment verification failed");
+                console.error("Status:", err.response?.status);
+                console.error("Error data:", err.response?.data);
+                throw err;
+              });
+
+            if (verifyResult.success) {
+              toast.success("Payment successful! Activating your subscription...");
+              setTimeout(() => window.location.reload(), 2000);
+            } else {
+              throw new Error(verifyResult.error || "Payment verification failed");
+            }
+          } catch (error) {
+            console.error("Payment verification error:", error);
+            if (axios.isAxiosError(error)) {
+              const errorMsg = error.response?.data?.error || error.response?.data?.details || error.message;
+              toast.error(`Payment verification failed: ${errorMsg}`);
+            } else {
+              toast.error("Payment verification failed. Please contact support.");
+            }
+          } finally {
+            setLoading(null);
+          }
+        },
+        prefill: {
+          name: user.name || "",
+          email: user.email || "",
+        },
+        theme: {
+          color: "#3B82F6",
+        },
+        modal: {
+          ondismiss: function() {
+            setLoading(null);
+            toast.info("Payment cancelled");
+          }
+        }
+      };
+
+      // @ts-expect-error -- Razorpay is loaded globally ---
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to start upgrade process";
-      console.error("Error upgrading plan:", error);
+      console.error("Error in handleUpgrade:", error);
+      
+      let message = "Failed to start upgrade process";
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.error) {
+          message = error.response.data.error;
+        } else if (error.response?.data?.details) {
+          message = error.response.data.details;
+        } else if (error.message) {
+          message = error.message;
+        }
+        
+        console.error("Axios error details:", {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+        });
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      
       toast.error(message);
-    } finally {
       setLoading(null);
     }
   };
@@ -72,9 +225,8 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
         const savings =
           billingCycle === "yearly" ? plan.price.monthly * 12 - plan.price.yearly : 0;
         const isCurrentPlan = currentPlan === plan.id;
-        const isFree = plan.id === "free";
+        const isFree = plan.id === "free" || plan.id === "basic";
         
-        // Disable all buttons if user has active paid plan, except current plan display
         const isDisabled = hasActivePaidPlan || isFree || loading === plan.id;
 
         const getButtonContent = () => {

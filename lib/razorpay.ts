@@ -14,11 +14,22 @@ export function getRazorpayInstance() {
   });
 }
 
+export const RAZORPAY_CONFIG = {
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+  currency: "inr",
+  successUrl: `${process.env.NEXTAUTH_URL}/billing/success`,
+  cancelUrl: `${process.env.NEXTAUTH_URL}/billing?canceled=true`,
+} as const;
+
 export const PLAN_PRICES = {
   personal: {
     pro: {
       monthly: 299,
       yearly: 2999,
+    },
+    enterprise: {
+      monthly: 599,
+      yearly: 5999,
     },
   },
   org: {
@@ -34,6 +45,7 @@ export const PLAN_PRICES = {
 } satisfies {
   personal: {
     pro: Record<"monthly" | "yearly", number>;
+    enterprise: Record<"monthly" | "yearly", number>;
   };
   org: {
     pro: Record<"monthly" | "yearly", number>;

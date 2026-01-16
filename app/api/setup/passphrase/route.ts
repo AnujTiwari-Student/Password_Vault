@@ -58,7 +58,6 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx) => {
       let newOrg = null;
 
-      // 1️⃣ Update user crypto & account info
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: {
@@ -70,7 +69,6 @@ export async function POST(request: Request) {
         select: { id: true, email: true, name: true },
       });
 
-      // 2️⃣ Store wrapped private key securely
       await tx.logs.create({
         data: {
           user_id: userId,
@@ -83,9 +81,7 @@ export async function POST(request: Request) {
         },
       });
 
-      // ================= ORG ACCOUNT =================
       if (account_type === "org") {
-        // 3️⃣ Create org
         newOrg = await tx.org.create({
           data: {
             name: org_name,

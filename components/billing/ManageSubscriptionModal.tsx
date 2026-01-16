@@ -4,13 +4,12 @@ import {
   CreditCard,
   Calendar,
   AlertTriangle,
-  ExternalLink,
   Loader2,
   CheckCircle,
 } from "lucide-react";
 import { BillingData, BillingPlan, PlanType } from "./types";
 import { toast } from "sonner";
-import { createStripePortalSession } from "@/actions/stripe-action";
+import axios from "axios";
 
 interface ManageSubscriptionModalProps {
   isOpen: boolean;
@@ -18,6 +17,8 @@ interface ManageSubscriptionModalProps {
   billingData: BillingData | null;
   currentPlan: PlanType;
   plans: BillingPlan[];
+  vaultId: string;
+  userId: string;
 }
 
 export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = ({
@@ -26,27 +27,36 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
   billingData,
   currentPlan,
   plans,
+  vaultId,
+  userId,
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const currentPlanDetails = plans.find((p) => p.id === currentPlan);
 
-  const handleOpenStripePortal = async () => {
-    setIsLoading(true);
+  const handleCancelSubscription = async () => {
+    if (!confirm("Are you sure you want to cancel your subscription? You will have access until the end of your current billing period.")) {
+      return;
+    }
+
+    setIsCancelling(true);
     try {
-      const result = await createStripePortalSession();
+      const result = await axios.post('/api/subscription/cancel', {
+        vaultId,
+        userId,
+      }).then(res => res.data);
 
       if (result.error) {
         throw new Error(result.error);
       }
 
-      if (result.url) {
-        window.location.href = result.url;
-      }
+      toast.success("Subscription cancelled successfully. You will have access until the end of your billing period.");
+      setTimeout(() => window.location.reload(), 2000);
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Failed to open billing portal";
+        error instanceof Error ? error.message : "Failed to cancel subscription";
       toast.error(message);
-      setIsLoading(false);
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -54,19 +64,16 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl minimal-scrollbar"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-700">
             <h2 className="text-xl font-bold text-white">Manage Subscription</h2>
             <button
@@ -78,9 +85,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
             </button>
           </div>
 
-          {/* Content */}
           <div className="p-6 space-y-6">
-            {/* Current Subscription Status */}
             <div className="bg-gray-750 rounded-lg p-5 border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <CheckCircle size={20} className="text-green-400" />
@@ -102,7 +107,8 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Amount</span>
                   <span className="text-white font-semibold">
-                    ₹{billingData?.amount?.toFixed(2) || "0.00"}/month
+                    ₹{billingData?.amount?.toFixed(2) || "0.00"}/
+                    {billingData?.billingCycle === "annually" ? "year" : "month"}
                   </span>
                 </div>
                 {billingData?.nextBillingDate && (
@@ -128,7 +134,6 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
               </div>
             </div>
 
-            {/* Payment Method */}
             <div className="bg-gray-750 rounded-lg p-5 border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <CreditCard size={20} className="text-blue-400" />
@@ -137,12 +142,11 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
               <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm">Current Method</span>
                 <span className="text-white font-semibold">
-                  {billingData?.paymentMethod || "Not set"}
+                  {billingData?.paymentMethod || "Razorpay"}
                 </span>
               </div>
             </div>
 
-            {/* Billing Cycle */}
             <div className="bg-gray-750 rounded-lg p-5 border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <Calendar size={20} className="text-purple-400" />
@@ -151,53 +155,60 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
               <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm">Cycle</span>
                 <span className="text-white font-semibold capitalize">
-                  {billingData?.billingCycle || "Monthly"}
+                  {billingData?.billingCycle === "annually" ? "Yearly" : "Monthly"}
                 </span>
               </div>
             </div>
 
-            {/* Stripe Portal Actions */}
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-5">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                Full Subscription Management
-              </h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Access the Stripe billing portal to update payment methods, change billing cycle,
-                view all invoices, and manage or cancel your subscription.
-              </p>
-              <button
-                onClick={handleOpenStripePortal}
-                disabled={isLoading}
-                className="w-full px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 border border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Opening Portal...
-                  </>
-                ) : (
-                  <>
-                    <ExternalLink className="w-4 h-4" />
-                    Open Stripe Billing Portal
-                  </>
-                )}
-              </button>
-            </div>
+            {!billingData?.cancelAtPeriodEnd && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-5">
+                <h3 className="text-lg font-semibold text-red-400 mb-2 flex items-center gap-2">
+                  <AlertTriangle size={20} />
+                  Cancel Subscription
+                </h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  You will have access until the end of your current billing period. Your subscription will not auto-renew.
+                </p>
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={isCancelling}
+                  className="w-full px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 border border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Cancelling...
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-4 h-4" />
+                      Cancel Subscription
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
 
-            {/* Cancel Warning */}
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-5">
-              <h3 className="text-lg font-semibold text-red-400 mb-2 flex items-center gap-2">
-                <AlertTriangle size={20} />
-                Cancel Subscription
-              </h3>
-              <p className="text-gray-400 text-sm">
-                To cancel your subscription, use the Stripe billing portal above. You will have
-                access until the end of your current billing period.
-              </p>
-            </div>
+            {billingData?.cancelAtPeriodEnd && (
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-5">
+                <h3 className="text-lg font-semibold text-yellow-400 mb-2 flex items-center gap-2">
+                  <AlertTriangle size={20} />
+                  Subscription Scheduled for Cancellation
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  Your subscription is set to cancel on{" "}
+                  {billingData.nextBillingDate && 
+                    new Date(billingData.nextBillingDate).toLocaleDateString("en-IN", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  }. You will continue to have access until then.
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-700">
             <button
               onClick={onClose}
