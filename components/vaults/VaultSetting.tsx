@@ -36,7 +36,7 @@ function VaultSetting() {
   if (!vault) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-gray-400">No vault found</div>
+        <div className="text-xl text-gray-400">No Org found</div>
       </div>
     );
   }
@@ -48,7 +48,7 @@ function VaultSetting() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 border-b border-gray-700/50 pb-4">
           <div className="min-w-0 flex-shrink">
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white truncate">{vault.name} Settings</h1>
-            <p className="text-gray-400 text-sm mt-1">Manage your vault configuration and billing</p>
+            <p className="text-gray-400 text-sm mt-1">Manage your org configuration and billing</p>
           </div>
           <div className={`px-3 py-1 rounded-full text-xs border flex-shrink-0 ${
             vault.type === 'personal' 

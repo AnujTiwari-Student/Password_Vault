@@ -132,7 +132,7 @@ export function AppSidebar({
       </SidebarContent>
       <SidebarFooter className="bg-gray-900">
         {/* @ts-expect-error Todo: Type missmatch */}
-        <NavUser user={user} />
+        <NavUser user={user} onTabChange={setActiveTab} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

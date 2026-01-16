@@ -135,7 +135,7 @@ export const VaultNameEditor: React.FC = () => {
           <Edit className="w-5 h-5" />
           Vault Name
         </h3>
-        <p className="text-gray-400">No vaults found</p>
+        <p className="text-gray-400">No org found</p>
       </div>
     );
   }
@@ -144,7 +144,7 @@ export const VaultNameEditor: React.FC = () => {
     <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30">
       <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
         <Edit className="w-5 h-5" />
-        Vault Name
+        Organization Name
       </h3>
       
       <div className="space-y-4">
@@ -235,7 +235,7 @@ export const VaultNameEditor: React.FC = () => {
           ) : (
             <div className="flex-1 flex items-center justify-between">
               <div>
-                <p className="text-lg font-medium text-white">{selectedVault?.name}</p>
+                <p className="text-lg font-medium text-white">{selectedVault?.name} Organization</p>
                 <p className="text-sm text-gray-400">
                   {selectedVault?.can_edit 
                     ? 'Click edit to change your vault name' 

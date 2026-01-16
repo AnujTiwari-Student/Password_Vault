@@ -4,7 +4,6 @@ import {
   BadgeCheck,
   Bell,
   ChevronUpIcon,
-  CreditCard,
   Sparkles,
 } from "lucide-react"
 
@@ -33,12 +32,14 @@ import { getNameFromEmail } from "@/utils/get-name"
 
 export function NavUser({
   user,
+  onTabChangeAction,
 }: {
   user: {
     name: string | null
     email: string
     image: string | null
   }
+  onTabChangeAction?: (tab: string) => void
 }) {
   const { isMobile } = useSidebar()
 
@@ -47,6 +48,12 @@ export function NavUser({
     : "https://github.com/shadcn.png";
 
   const displayName = user.name || getNameFromEmail(user.email);
+
+  const handleMenuItemClick = (tab: string) => {
+    if (onTabChangeAction) {
+      onTabChangeAction(tab);
+    }
+  };
 
   return (
     <SidebarMenu className="bg-gray-900 text-white">
@@ -88,22 +95,27 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-gray-700" />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="text-white hover:bg-gray-700 focus:bg-gray-700">
+              <DropdownMenuItem 
+                className="text-white hover:bg-gray-700 focus:bg-gray-700"
+                onClick={() => handleMenuItemClick("Settings")}
+              >
                 <Sparkles />
                 <p className="text-white">Upgrade to Pro</p>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-gray-700" />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="text-white hover:bg-gray-700 focus:bg-gray-700">
+              <DropdownMenuItem 
+                className="text-white hover:bg-gray-700 focus:bg-gray-700"
+                onClick={() => handleMenuItemClick("Dashboard")}
+              >
                 <BadgeCheck />
                 <p className="text-white">Account</p>
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                <CreditCard />
-                <p className="text-white">Billing</p>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-white hover:bg-gray-700 focus:bg-gray-700">
+              <DropdownMenuItem 
+                className="text-white hover:bg-gray-700 focus:bg-gray-700"
+                onClick={() => handleMenuItemClick("Active")}
+              >
                 <Bell />
                 <p className="text-white">Notifications</p>
               </DropdownMenuItem>
