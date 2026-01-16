@@ -5,13 +5,13 @@ import { auth } from '@/lib/auth';
 const PRICING = {
   personal: {
     basic: { monthly: 0, yearly: 0 },
-    professional: { monthly: 299, yearly: 2990 },  
-    enterprise: { monthly: 999, yearly: 9990 },
+    professional: { monthly: 749, yearly: 7490 },  
+    enterprise: { monthly: 2499, yearly: 24990 },
   },
   org: {
     basic: { monthly: 0, yearly: 0 },
-    professional: { monthly: 499, yearly: 4990 },  
-    enterprise: { monthly: 1499, yearly: 14990 },
+    professional: { monthly: 2099, yearly: 20990 },  
+    enterprise: { monthly: 8299, yearly: 82990 },
   },
 };
 
