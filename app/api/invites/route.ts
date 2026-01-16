@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/db";
-import { AddMemberSchema } from "@/schema/zod-schema";
 import { APIResponse, InviteResponse } from "@/types/api-responses";
 import { auth } from "@/lib/auth";
+import * as z from "zod";
+
+const InviteSchema = z.object({
+  org_id: z.string().min(1, "Organization ID is required"),
+  email: z.string().email("Invalid email address"),
+  // @ts-expect-error Type 'string' is not assignable to type '"member" | "admin" | "viewer" | "owner"'.
+  role: z.enum(["member", "admin", "viewer", "owner"], {
+    errorMap: () => ({ message: "Invalid role" })
+  }),
+});
 
 export async function POST(request: NextRequest): Promise<NextResponse<APIResponse<InviteResponse>>> {
   try {
@@ -10,78 +19,104 @@ export async function POST(request: NextRequest): Promise<NextResponse<APIRespon
     if (!session?.user?.id) {
       return NextResponse.json({
         success: false,
-        errors: { _form: ["Unauthorized"] }
+        errors: { _form: ["Unauthorized. Please log in."] }
       }, { status: 401 });
     }
 
     const data = await request.json();
-    const validatedData = AddMemberSchema.parse(data);
-
-    const canAddMember = await prisma.membership.findFirst({
-      where: {
-        user_id: session.user.id,
-        org_id: data.org_id,
-        role: { in: ['owner', 'admin'] }
-      }
-    });
-
-    if (!canAddMember) {
+    
+    const validationResult = InviteSchema.safeParse(data);
+    if (!validationResult.success) {
+      // @ts-expect-error Type 'ZodError' is not assignable to type 'string'.
+      const errors = validationResult.error.errors.map(e => e.message).join(", ");
       return NextResponse.json({
         success: false,
-        errors: { _form: ["Organization not found or insufficient permissions"] }
-      }, { status: 403 });
+        errors: { _form: [errors] }
+      }, { status: 400 });
     }
 
-    const existingMember = await prisma.membership.findFirst({
-      where: { 
-        org_id: data.org_id,
-        user: {
-          email: validatedData.email
+    const validatedData = validationResult.data;
+
+    const userMembership = await prisma.membership.findFirst({
+      where: {
+        user_id: session.user.id,
+        org_id: validatedData.org_id,
+        role: { in: ['owner', 'admin'] }
+      },
+      include: {
+        org: {
+          select: {
+            id: true,
+            name: true
+          }
         }
       }
     });
 
-    if (existingMember) {
+    if (!userMembership) {
       return NextResponse.json({
         success: false,
-        errors: { _form: ["User is already a member of this organization"] }
-      }, { status: 400 });
+        errors: { _form: ["Organization not found or you don't have permission to invite members. Only owners and admins can invite members."] }
+      }, { status: 403 });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: validatedData.email },
+      select: { id: true }
+    });
+
+    if (existingUser) {
+      const existingMembership = await prisma.membership.findFirst({
+        where: { 
+          org_id: validatedData.org_id,
+          user_id: existingUser.id
+        }
+      });
+
+      if (existingMembership) {
+        return NextResponse.json({
+          success: false,
+          errors: { _form: [`This user is already a member of ${userMembership.org.name}`] }
+        }, { status: 400 });
+      }
     }
 
     const existingInvitation = await prisma.invite.findFirst({
       where: {
-        org_id: data.org_id,
+        org_id: validatedData.org_id,
         email: validatedData.email,
-        status: 'pending'
+        status: 'pending',
+        expires_at: { gt: new Date() } 
       }
     });
 
     if (existingInvitation) {
       return NextResponse.json({
         success: false,
-        errors: { _form: ["Invitation already sent to this email"] }
+        errors: { _form: [`An invitation has already been sent to ${validatedData.email} for ${userMembership.org.name}`] }
       }, { status: 400 });
     }
 
     const invitation = await prisma.invite.create({
       data: {
-        org_id: data.org_id,
-        email: validatedData.email,
+        org_id: validatedData.org_id,
+        email: validatedData.email.toLowerCase().trim(),
         role: validatedData.role,
         invited_by: session.user.id,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
       }
     });
 
+    // @ts-expect-error Type '"member" | "admin" | "viewer" | "owner"' is not assignable to type '"member" | "admin" | "viewer"'.
     return NextResponse.json({
       success: true,
-      message: "Invitation sent successfully",
+      message: `Invitation sent successfully to ${validatedData.email}`,
       data: {
         invitation: {
           id: invitation.id,
-          team_id: data.org_id,
+          team_id: validatedData.org_id,
           email: invitation.email,
-          role: invitation.role as 'member' | 'admin',
+          role: invitation.role as 'member' | 'admin' | 'viewer',
           status: 'pending' as const,
           invited_by: invitation.invited_by,
           invited_at: invitation.created_at.toISOString(),
@@ -92,9 +127,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<APIRespon
 
   } catch (error: unknown) {
     console.error("Invite error:", error);
+    
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'P2002') {
+        return NextResponse.json({
+          success: false,
+          errors: { _form: ["An invitation for this email already exists in this organization"] }
+        }, { status: 400 });
+      }
+    }
+    
     return NextResponse.json({
       success: false,
-      errors: { _form: [error instanceof Error ? error.message : "Internal server error"] }
+      errors: { _form: [error instanceof Error ? error.message : "Internal server error. Please try again."] }
     }, { status: 500 });
   }
 }
@@ -113,6 +158,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const orgId = searchParams.get('org_id');
 
     if (orgId) {
+      // Get invitations for a specific organization (for admins/owners)
       const canViewInvites = await prisma.membership.findFirst({
         where: {
           user_id: session.user.id,
@@ -162,6 +208,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       });
 
     } else {
+      // Get invitations sent to the current user
       const invitations = await prisma.invite.findMany({
         where: {
           email: session.user.email,

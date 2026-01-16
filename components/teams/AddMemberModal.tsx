@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { UserPlus, Mail } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { UserPlus, Mail, Building2, AlertCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -32,35 +33,85 @@ import { Button } from "@/components/ui/button";
 import { FormError } from "../auth/form-error";
 import { FormSuccess } from "../auth/form-success";
 import { toast } from "sonner";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-type AddMemberFormValues = z.infer<typeof AddMemberSchema>;
+// Extended schema to include org selection
+const ExtendedAddMemberSchema = z.object({
+  org_id: z.string().min(1, "Please select an organization"),
+  email: z.string().email("Invalid email address"),
+  role: z.enum(["member", "admin", "viewer"]),
+});
+
+type ExtendedAddMemberFormValues = z.infer<typeof ExtendedAddMemberSchema>;
+
+interface Organization {
+  id: string;
+  name: string;
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+}
 
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   onMemberAdded: () => void;
-  orgId: string;
 }
 
 export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   isOpen,
   onClose,
   onMemberAdded,
-  orgId,
 }) => {
+  const user = useCurrentUser();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = React.useTransition();
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
 
-  const form = useForm<AddMemberFormValues>({
-    resolver: zodResolver(AddMemberSchema),
+  const form = useForm<ExtendedAddMemberFormValues>({
+    resolver: zodResolver(ExtendedAddMemberSchema),
     defaultValues: {
+      org_id: "",
       email: "",
       role: "member",
     },
   });
 
-  const handleSubmit = async (data: AddMemberFormValues): Promise<void> => {
+  // Fetch organizations where user is owner or admin
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      fetchOrganizations();
+    }
+  }, [isOpen, user?.id]);
+
+  const fetchOrganizations = async () => {
+    try {
+      setLoadingOrgs(true);
+      const response = await axios.get('/api/orgs/data', {
+        params: { userId: user?.id }
+      });
+      
+      if (response.data.success) {
+        // Filter only orgs where user is owner or admin
+        const adminOrgs = (response.data.data.organizations || []).filter(
+          (org: Organization) => org.role === 'owner' || org.role === 'admin'
+        );
+        setOrganizations(adminOrgs);
+
+        // Auto-select if only one org
+        if (adminOrgs.length === 1) {
+          form.setValue('org_id', adminOrgs[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch organizations:', error);
+      toast.error('Failed to load organizations');
+    } finally {
+      setLoadingOrgs(false);
+    }
+  };
+
+  const handleSubmit = async (data: ExtendedAddMemberFormValues): Promise<void> => {
     let response: Awaited<ReturnType<typeof axios.post>> | null = null;
     let externalError: unknown = null;
 
@@ -68,8 +119,14 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     setSuccess(null);
 
     try {
+      console.log("Sending invitation:", {
+        org_id: data.org_id,
+        email: data.email.trim(),
+        role: data.role,
+      });
+
       response = await axios.post<APIResponse<InviteResponse>>("/api/invites", {
-        org_id: orgId,
+        org_id: data.org_id,
         email: data.email.trim(),
         role: data.role,
       });
@@ -103,15 +160,20 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
 
       // @ts-expect-error Type invalid
       if (response?.data.success && response.data.data) {
-        setSuccess("Invitation sent successfully!");
-        toast.success("Member invitation sent successfully!");
+        const selectedOrg = organizations.find(org => org.id === data.org_id);
+        const successMsg = selectedOrg 
+          ? `Invitation sent to ${selectedOrg.name} successfully!`
+          : "Invitation sent successfully!";
+        
+        setSuccess(successMsg);
+        toast.success(successMsg);
         onMemberAdded();
         form.reset();
 
         setTimeout(() => {
           onClose();
           setSuccess(null);
-        }, 1000);
+        }, 1500);
 
         // @ts-expect-error Type invalid
       } else if (response?.data.errors?._form?.[0]) {
@@ -133,6 +195,10 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     onClose();
   };
 
+  const selectedOrgName = organizations.find(
+    org => org.id === form.watch('org_id')
+  )?.name;
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md bg-gray-900/95 border-gray-700/50 text-white">
@@ -141,6 +207,9 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
             <UserPlus className="w-5 h-5 text-gray-400" />
             Add Member to Organization
           </DialogTitle>
+          <DialogDescription className="text-gray-400">
+            Invite a new member to join your organization
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -149,6 +218,61 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
             className="space-y-4"
           >
             <div className="space-y-4">
+              {/* Organization Selector */}
+              <FormField
+                control={form.control}
+                name="org_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[#bfbfbf]">
+                      Organization *
+                    </FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={isPending || loadingOrgs}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="text-white bg-gray-800/50 border-gray-700/50 focus:border-gray-600">
+                          {loadingOrgs ? (
+                            <span className="text-gray-400">Loading organizations...</span>
+                          ) : (
+                            <SelectValue placeholder="Select organization" />
+                          )}
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        {organizations.length === 0 ? (
+                          <div className="p-2 text-center text-gray-400 text-sm">
+                            No organizations found where you are owner/admin
+                          </div>
+                        ) : (
+                          organizations.map((org) => (
+                            <SelectItem
+                              key={org.id}
+                              value={org.id}
+                              className="text-white hover:bg-gray-700"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-blue-400" />
+                                <div className="flex flex-col items-start">
+                                  <span>{org.name}</span>
+                                  <span className="text-xs text-gray-400 capitalize">
+                                    Your role: {org.role}
+                                  </span>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Email Input */}
               <FormField
                 control={form.control}
                 name="email"
@@ -165,6 +289,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                           type="email"
                           placeholder="member@example.com"
                           className="pl-10 text-white bg-gray-800/50 border-gray-700/50 focus:border-gray-600"
+                          disabled={isPending}
                         />
                       </div>
                     </FormControl>
@@ -173,6 +298,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                 )}
               />
 
+              {/* Role Selector */}
               <FormField
                 control={form.control}
                 name="role"
@@ -182,6 +308,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={isPending}
                     >
                       <FormControl>
                         <SelectTrigger className="text-white bg-gray-800/50 border-gray-700/50 focus:border-gray-600">
@@ -211,17 +338,6 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                             </span>
                           </div>
                         </SelectItem>
-                        {/* <SelectItem
-                          value="owner"
-                          className="text-white hover:bg-gray-700"
-                        >
-                          <div className="flex flex-col items-start">
-                            <span>Owner</span>
-                            <span className="text-xs text-gray-400">
-                              Can manage and invite members
-                            </span>
-                          </div>
-                        </SelectItem> */}
                         <SelectItem
                           value="viewer"
                           className="text-white hover:bg-gray-700"
@@ -229,7 +345,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                           <div className="flex flex-col items-start">
                             <span>Viewer</span>
                             <span className="text-xs text-gray-400">
-                              Can view and use resources
+                              Can only view resources
                             </span>
                           </div>
                         </SelectItem>
@@ -241,11 +357,25 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
               />
             </div>
 
+            {/* Info Box */}
             <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/30">
-              <p className="text-xs text-gray-400">
-                An invitation will be sent to this email address. They will need
-                to accept the invitation to join the organization.
-              </p>
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-gray-400">
+                  {selectedOrgName ? (
+                    <p>
+                      An invitation will be sent to join{" "}
+                      <strong className="text-white">{selectedOrgName}</strong>.
+                      They will need to accept the invitation to join.
+                    </p>
+                  ) : (
+                    <p>
+                      Select an organization and enter the members email address
+                      to send an invitation.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <FormError message={error} />
@@ -263,8 +393,8 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-gray-600/70 hover:bg-gray-600/90 text-white"
-                disabled={isPending}
+                className="flex-1 bg-blue-600/90 hover:bg-blue-600 text-white"
+                disabled={isPending || organizations.length === 0}
               >
                 {isPending ? (
                   <div className="flex items-center gap-2">
