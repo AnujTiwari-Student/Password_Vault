@@ -4,7 +4,6 @@ import * as React from "react";
 import { useState, useEffect, useCallback } from "react";
 import { ChevronsUpDown, Plus, Building2, Crown } from "lucide-react";
 import axios from "axios";
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,9 +59,19 @@ export function TeamSwitcher() {
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
 
   const canUserCreateOrg = React.useMemo(() => {
+    // if (!activeOrg) {
+    //   // @ts-expect-error TS(2769)
+    //   return canCreateOrg(user);
+    // }
     // @ts-expect-error TS(2769)
-    return canCreateOrg(user);
-  }, [user]);
+    const isOwnerOrAdmin = user?.account_type === 'org' && user.account_type !== 'personal';
+    
+    // @ts-expect-error TS(2769)
+    const hasGlobalPermission = canCreateOrg(user);
+    
+    return isOwnerOrAdmin && hasGlobalPermission;
+    //  eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, activeOrg]);
 
   const updateUrlWithOrg = useCallback((orgId: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -88,7 +97,9 @@ export function TeamSwitcher() {
         const orgs = response.data.data.organizations || [];
         setOrganizations(orgs);
         
-        if (!activeOrg && !searchParams.get('org')) {
+        // Only set active org on initial load if there's no URL param and no activeOrg set
+        const orgIdFromUrl = searchParams.get('org');
+        if (!activeOrg && !orgIdFromUrl && orgs.length > 0) {
           const currentOrg = orgs.find((org: Organization) => org.id === user?.org?.id) || orgs[0];
           if (currentOrg) {
             setActiveOrg(currentOrg);
@@ -102,7 +113,8 @@ export function TeamSwitcher() {
     } finally {
       setIsLoadingOrgs(false);
     }
-  }, [user?.id, user?.org?.id, activeOrg, searchParams, updateUrlWithOrg]);
+    //  eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.org?.id, searchParams]);
 
   const fetchVaultForOrg = useCallback(async (orgId: string) => {
     try {
@@ -151,6 +163,7 @@ export function TeamSwitcher() {
     fetchCurrentPlan();
   }, [user?.vault?.id, activeOrg?.id, fetchVaultForOrg]);
 
+  // Sync activeOrg with URL - removed activeOrg from dependencies to prevent infinite loop
   useEffect(() => {
     const orgIdFromUrl = searchParams.get('org');
     if (orgIdFromUrl && organizations.length > 0) {
@@ -158,10 +171,12 @@ export function TeamSwitcher() {
       if (orgFromUrl && orgFromUrl.id !== activeOrg?.id) {
         setActiveOrg(orgFromUrl);
       }
-    } else if (!orgIdFromUrl && activeOrg) {
+    } else if (!orgIdFromUrl) {
+      // Only set to null if URL has no org param
       setActiveOrg(null);
     }
-  }, [searchParams, organizations, activeOrg?.id, activeOrg]);
+    //  eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, organizations]);
 
   useEffect(() => {
     if (!user) {
@@ -183,7 +198,8 @@ export function TeamSwitcher() {
     if (user?.id) {
       fetchOrganizations();
     }
-  }, [user?.id, fetchOrganizations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const handleCreateOrg = (): void => {
     if (!canUserCreateOrg) {
@@ -323,6 +339,7 @@ export function TeamSwitcher() {
                 </DropdownMenuItem>
               ))}
               
+              {/* Only show Create Organization button when user has permission */}
               {canUserCreateOrg && (
                 <>
                   <DropdownMenuSeparator className="bg-gray-700" />
