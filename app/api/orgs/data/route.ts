@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
           type: 'org',
           ovk_id: orgVaultKey.id,
           orgVaultKeyId: orgVaultKey.id,
+          created_by: session.user.id!,
         },
       });
 

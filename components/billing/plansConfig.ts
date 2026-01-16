@@ -3,7 +3,7 @@ import { BillingPlan } from "./types";
 export const personalPlans: BillingPlan[] = [
   {
     id: "free",
-    name: "Free",
+    name: "Basic",
     price: { monthly: 0, yearly: 0 },
     limits: {
       vaults: 1,

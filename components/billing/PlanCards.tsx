@@ -256,7 +256,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
             return (
               <>
                 <Shield className="w-4 h-4" />
-                Manage via Portal
+                Already on Paid Plan
               </>
             );
           }

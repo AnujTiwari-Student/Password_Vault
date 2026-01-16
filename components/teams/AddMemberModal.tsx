@@ -211,7 +211,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                             </span>
                           </div>
                         </SelectItem>
-                        <SelectItem
+                        {/* <SelectItem
                           value="owner"
                           className="text-white hover:bg-gray-700"
                         >
@@ -221,7 +221,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                               Can manage and invite members
                             </span>
                           </div>
-                        </SelectItem>
+                        </SelectItem> */}
                         <SelectItem
                           value="viewer"
                           className="text-white hover:bg-gray-700"
