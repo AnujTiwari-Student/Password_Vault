@@ -1,163 +1,177 @@
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { updateUserSubscription } from '@/lib/subscription';
+import { getRazorpayInstance } from '@/lib/razorpay';
 import { auth } from '@/lib/auth';
-import { PlanType } from '@prisma/client';
 
-export interface VerifyPaymentRequest {
-  razorpay_order_id: string;
-  razorpay_payment_id: string;
-  razorpay_signature: string;
-  planId: string; 
-  billingCycle: 'monthly' | 'yearly';
+const PRICING = {
+  personal: {
+    basic: { monthly: 0, yearly: 0 },
+    professional: { monthly: 749, yearly: 7490 },
+    enterprise: { monthly: 2499, yearly: 24990 },
+  },
+  org: {
+    basic: { monthly: 0, yearly: 0 },
+    professional: { monthly: 2099, yearly: 20990 },
+    enterprise: { monthly: 8299, yearly: 82990 },
+  },
+};
+
+const PLAN_ID_MAP: Record<string, string> = {
+  'free': 'basic',
+  'basic': 'basic',
+  'pro': 'professional',
+  'professional': 'professional',
+  'enterprise': 'enterprise',
+};
+
+interface CreateRazorpayOrderRequest {
+  planId: string;
+  billingCycle: string;
   vaultId: string;
-  vaultType: 'org' | 'personal';
-  amount: number;
+  vaultType: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("=== Payment Verification Started ===");
+    console.log("=== Razorpay Order Creation Started ===");
     
     const session = await auth();
     console.log("Session:", session ? "Valid" : "Invalid");
 
     if (!session?.user?.id) {
-      console.error("Unauthorized: No session");
+      console.error("Unauthorized: No session found");
       return NextResponse.json(
         { error: "Unauthorized. Please sign in." },
         { status: 401 }
       );
     }
 
-    const data: VerifyPaymentRequest = await request.json();
-    console.log("Verification request data:", {
-      ...data,
-      razorpay_signature: data.razorpay_signature ? "[PRESENT]" : "[MISSING]"
-    });
+    const data: CreateRazorpayOrderRequest = await request.json();
+    console.log("Request data received:", data);
 
-    const { 
-      razorpay_order_id, 
-      razorpay_payment_id, 
-      razorpay_signature,
-      planId,
-      billingCycle,
-      vaultId,
-      vaultType,
-      amount,
-    } = data;
-
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      console.error("Missing Razorpay fields:", {
-        order_id: !!razorpay_order_id,
-        payment_id: !!razorpay_payment_id,
-        signature: !!razorpay_signature,
-      });
-      return NextResponse.json(
-        { error: "Missing required payment details" },
-        { status: 400 }
-      );
-    }
+    const { planId, billingCycle, vaultId, vaultType } = data;
 
     if (!planId || !billingCycle || !vaultId || !vaultType) {
-      console.error("Missing subscription fields:", {
-        planId: !!planId,
-        billingCycle: !!billingCycle,
-        vaultId: !!vaultId,
-        vaultType: !!vaultType,
-      });
+      console.error("Missing fields:", { planId, billingCycle, vaultId, vaultType });
       return NextResponse.json(
-        { error: "Missing subscription details" },
+        { 
+          error: "Missing required fields",
+          details: {
+            planId: !planId ? "missing" : "ok",
+            billingCycle: !billingCycle ? "missing" : "ok",
+            vaultId: !vaultId ? "missing" : "ok",
+            vaultType: !vaultType ? "missing" : "ok",
+          }
+        },
         { status: 400 }
       );
     }
 
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      console.error("Invalid amount:", amount, typeof amount);
-      return NextResponse.json(
-        { error: "Invalid payment amount" },
-        { status: 400 }
-      );
-    }
-
-    const razorpaySecret = process.env.RAZORPAY_KEY_SECRET;
-    
-    if (!razorpaySecret) {
-      console.error("CRITICAL: Razorpay secret not configured");
-      throw new Error("Razorpay secret not configured");
-    }
-
-    console.log("Verifying signature...");
-    
-    const generatedSignature = crypto
-      .createHmac('sha256', razorpaySecret)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest('hex');
-
-    if (generatedSignature !== razorpay_signature) {
-      console.error('Signature verification FAILED');
-      console.error('Expected:', generatedSignature.substring(0, 20) + "...");
-      console.error('Received:', razorpay_signature.substring(0, 20) + "...");
-      
-      return NextResponse.json(
-        { error: "Invalid payment signature. Payment verification failed." },
-        { status: 400 }
-      );
-    }
-
-    console.log('✓ Payment signature verified successfully');
-
-    const normalizedPlanId = planId.toLowerCase();
+    const normalizedPlanId = PLAN_ID_MAP[planId.toLowerCase()] || planId.toLowerCase();
+    console.log("Original planId:", planId);
     console.log("Normalized planId:", normalizedPlanId);
 
-    const prismaBillingCycle = billingCycle === 'yearly' ? 'annually' : 'monthly';
-    console.log("Prisma billing cycle:", prismaBillingCycle);
-
-    console.log("Updating subscription in database...");
-    
-    const result = await updateUserSubscription({
-      vaultId,
-      userId: session.user.id,
-      planId: normalizedPlanId as PlanType, 
-      billingCycle: prismaBillingCycle as 'monthly' | 'annually',
-      razorpayOrderId: razorpay_order_id,
-      razorpayPaymentId: razorpay_payment_id,
-      amount: amount, 
-      vaultType: vaultType as 'org' | 'personal',
-    });
-
-    if (!result.success) {
-      console.error('Failed to update subscription:', result.error);
+    if (normalizedPlanId === 'basic' || normalizedPlanId === 'free') {
+      console.error("Cannot create payment for basic/free plan");
       return NextResponse.json(
-        { error: result.error || "Failed to activate subscription" },
-        { status: 500 }
+        { error: "Cannot create payment for basic (free) plan" },
+        { status: 400 }
       );
     }
 
+    if (vaultType !== 'org' && vaultType !== 'personal') {
+      console.error("Invalid vaultType:", vaultType);
+      return NextResponse.json(
+        { error: "Invalid vault type. Must be 'org' or 'personal'" },
+        { status: 400 }
+      );
+    }
 
-    // @ts-expect-error --- IGNORE ---
-    console.log('✓ Subscription updated successfully:', result.subscription?.id);
+    if (billingCycle !== 'monthly' && billingCycle !== 'yearly') {
+      console.error("Invalid billingCycle:", billingCycle);
+      return NextResponse.json(
+        { error: "Invalid billing cycle. Must be 'monthly' or 'yearly'" },
+        { status: 400 }
+      );
+    }
+
+    const vaultPricing = vaultType === "org" ? PRICING.org : PRICING.personal;
+    console.log("Vault pricing structure:", Object.keys(vaultPricing));
+
+    if (!vaultPricing[normalizedPlanId as keyof typeof vaultPricing]) {
+      console.error("Invalid planId:", normalizedPlanId, "Available plans:", Object.keys(vaultPricing));
+      return NextResponse.json(
+        { 
+          error: `Invalid plan: ${normalizedPlanId}. Available plans: ${Object.keys(vaultPricing).join(', ')}` 
+        },
+        { status: 400 }
+      );
+    }
+
+    const price = vaultPricing[normalizedPlanId as keyof typeof vaultPricing][billingCycle as 'monthly' | 'yearly'];
+    console.log("Price found:", price);
+
+    if (!price || price === 0) {
+      console.error("Invalid price:", price);
+      return NextResponse.json(
+        { error: "Invalid plan or pricing configuration" },
+        { status: 400 }
+      );
+    }
+
+    const amountInPaise = price * 100;
+    console.log("Amount in paise:", amountInPaise);
+
+    if (!amountInPaise || amountInPaise <= 0 || !Number.isInteger(amountInPaise)) {
+      console.error("Invalid amount:", amountInPaise);
+      return NextResponse.json(
+        { error: "Invalid amount calculation" },
+        { status: 400 }
+      );
+    }
+
+    console.log("Creating Razorpay order...");
+    const razorpay = getRazorpayInstance();
+    
+    const orderData = {
+      amount: amountInPaise,
+      currency: 'INR',
+      receipt: `receipt_${vaultId}_${Date.now()}`,
+      notes: {
+        userId: session.user.id,
+        vaultId: vaultId,
+        vaultType: vaultType,
+        planId: normalizedPlanId,
+        billingCycle: billingCycle,
+        userEmail: session.user.email || '',
+        userName: session.user.name || '',
+      },
+    };
+    console.log("Order data:", orderData);
+
+    const order = await razorpay.orders.create(orderData);
+    console.log("✓ Razorpay order created successfully:", order.id);
 
     const response = {
       success: true,
-      message: "Payment verified and subscription activated successfully",
-      subscription: {
-        // @ts-expect-error --- IGNORE ---
-        id: result.subscription?.id,
-        // @ts-expect-error --- IGNORE ---
-        plan: result.subscription?.plan,
-        // @ts-expect-error --- IGNORE ---
-        status: result.subscription?.status,
-        // @ts-expect-error --- IGNORE ---
-        nextBillingDate: result.subscription?.next_billing_date,
+      order: {
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        receipt: order.receipt,
+      },
+      planDetails: {
+        planId: normalizedPlanId,
+        billingCycle,
+        priceInRupees: price,
+        vaultType,
       },
     };
-    console.log("Returning success response");
+    console.log("Returning response:", response);
 
     return NextResponse.json(response, { status: 200 });
 
   } catch (error) {
-    console.error("=== Payment Verification Error ===");
+    console.error("=== Razorpay Order Error ===");
     console.error("Error details:", error);
     
     if (error instanceof Error) {
@@ -167,7 +181,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(
       { 
-        error: "Payment verification failed. Please contact support.",
+        error: "Failed to create payment order",
         details: error instanceof Error ? error.message : "Unknown error"
       },
       { status: 500 }

@@ -120,7 +120,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: result.order.amount,
         currency: result.order.currency,
-        name: "Your Company Name",
+        name: "LovzMe",
         description: `${selectedPlan.name} - ${billingCycle} subscription`,
         order_id: result.order.id,
         handler: async function (response: VerifyPaymentRequest) {
