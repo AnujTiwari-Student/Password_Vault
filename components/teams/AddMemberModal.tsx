@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import axios from "axios";
-import { AddMemberSchema } from "@/schema/zod-schema";
 import { APIResponse, InviteResponse } from "@/types/api-responses";
 import {
   Dialog,
@@ -77,11 +76,11 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     },
   });
 
-  // Fetch organizations where user is owner or admin
   useEffect(() => {
     if (isOpen && user?.id) {
       fetchOrganizations();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user?.id]);
 
   const fetchOrganizations = async () => {

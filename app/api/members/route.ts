@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/db";
 import { APIResponse } from "@/types/api-responses";
 import { auth } from "@/lib/auth";
+import { AuditSubjectType } from "@prisma/client";
+import { MembersResponse } from "@/components/org/types";
 
-export async function GET(request: NextRequest): Promise<NextResponse<APIResponse>> {
+export async function GET(request: NextRequest): Promise<NextResponse<APIResponse<MembersResponse>>> {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -13,67 +15,72 @@ export async function GET(request: NextRequest): Promise<NextResponse<APIRespons
       }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const orgId = searchParams.get('org_id');
-    const teamId = searchParams.get('team_id');
 
-    if (teamId) {
-      const members = await prisma.membership.findMany({
-        where: { org_id: teamId },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true
-            }
-          }
-        }
-      });
-
+    if (!orgId) {
       return NextResponse.json({
-        success: true,
-        data: { members }
-      });
+        success: false,
+        errors: { _form: ["Organization ID is required"] }
+      }, { status: 400 });
     }
 
-    if (orgId) {
-      const members = await prisma.membership.findMany({
-        where: { org_id: orgId },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true
-            }
-          }
-        }
-      });
+    const userMembership = await prisma.membership.findFirst({
+      where: {
+        user_id: session.user.id,
+        org_id: orgId
+      }
+    });
 
+    if (!userMembership) {
       return NextResponse.json({
-        success: true,
-        data: { members }
-      });
+        success: false,
+        errors: { _form: ["You are not a member of this organization"] }
+      }, { status: 403 });
     }
 
-    return NextResponse.json({
-      success: false,
-      errors: { _form: ["Missing org_id or team_id parameter"] }
-    }, { status: 400 });
+    const members = await prisma.membership.findMany({
+      where: {
+        org_id: orgId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
+        },
+        org: {
+          select: {
+            id: true,
+            name: true,
+            owner_user_id: true
+          }
+        }
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
 
-  } catch (error: unknown) {
-    console.error("Members API error:", error);
+    // @ts-expect-error -- IGNORE --
+    return NextResponse.json({
+      success: true,
+      data: { members }
+    });
+
+  } catch (error) {
+    console.error("Get members error:", error);
     return NextResponse.json({
       success: false,
-      errors: { _form: [error instanceof Error ? error.message : "Internal server error"] }
+      errors: { _form: ["Failed to fetch members"] }
     }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest): Promise<NextResponse<APIResponse>> {
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -83,79 +90,90 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<APIResp
       }, { status: 401 });
     }
 
-    const url = new URL(request.url);
-    const memberId = url.searchParams.get('id');
+    const { searchParams } = request.nextUrl;
+    const membershipId = searchParams.get('id');
+    const orgId = searchParams.get('org_id');
 
-    if (!memberId) {
+    if (!membershipId || !orgId) {
       return NextResponse.json({
         success: false,
-        errors: { _form: ["Member ID is required"] }
+        errors: { _form: ["Missing membership ID or organization ID"] }
       }, { status: 400 });
     }
 
-    const membershipToDelete = await prisma.membership.findUnique({
-      where: { id: memberId },
+    const membership = await prisma.membership.findUnique({
+      where: { id: membershipId },
+      include: {
+        org: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
     });
 
-    if (!membershipToDelete) {
+    if (!membership) {
       return NextResponse.json({
         success: false,
-        errors: { _form: ["Member not found"] }
+        errors: { _form: ["Membership not found"] }
       }, { status: 404 });
     }
 
-    const org = await prisma.org.findUnique({
-      where: { id: membershipToDelete.org_id },
-      select: { owner_user_id: true },
-    });
-
-    if (!org) {
-      return NextResponse.json({
-        success: false,
-        errors: { _form: ["Organization not found"] }
-      }, { status: 404 });
-    }
-
-    const requestingUserMembership = await prisma.membership.findFirst({
+    const requestorMembership = await prisma.membership.findFirst({
       where: {
         user_id: session.user.id,
-        org_id: membershipToDelete.org_id,
-      },
+        org_id: membership.org_id,
+        role: { in: ['owner', 'admin'] }
+      }
     });
 
-    const isOrgOwner = org.owner_user_id === session.user.id;
-    const isAdmin = requestingUserMembership?.role === "admin";
-    const isSelf = membershipToDelete.user_id === session.user.id;
-
-    if (!isOrgOwner && !isAdmin && !isSelf) {
+    if (!requestorMembership && membership.org.owner_user_id !== session.user.id) {
       return NextResponse.json({
         success: false,
-        errors: { _form: ["Insufficient permissions to remove this member"] }
+        errors: { _form: ["Insufficient permissions to remove members from this organization"] }
       }, { status: 403 });
     }
 
-    if (membershipToDelete.role === "owner" && !isSelf) {
+    if (membership.role === 'owner') {
       return NextResponse.json({
         success: false,
-        errors: { _form: ["Cannot remove organization owner"] }
-      }, { status: 403 });
+        errors: { _form: ["Cannot remove the organization owner"] }
+      }, { status: 400 });
     }
 
-    await prisma.membership.delete({
-      where: { id: memberId },
-    });
+    if (membership.user_id === session.user.id) {
+      return NextResponse.json({
+        success: false,
+        errors: { _form: ["You cannot remove yourself from the organization"] }
+      }, { status: 400 });
+    }
 
-    await prisma.logs.create({
-      data: {
-        user_id: session.user.id,
-        action: "MEMBER_REMOVED",
-        subject_type: "MEMBERSHIP",
-        meta: {
-          removed_user_id: membershipToDelete.user_id,
-          org_id: membershipToDelete.org_id,
-          removed_by: session.user.id,
-        },
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.membership.delete({
+        where: { id: membershipId }
+      });
+
+      await tx.audit.create({
+        // @ts-expect-error -- IGNORE --
+        data: {
+          org_id: membership.org_id,
+          actor_user_id: session.user.id,
+          action: 'MEMBER_REMOVED',
+          subject_type: 'member' as AuditSubjectType,
+          subject_id: membership.user_id,
+          ip: request.headers.get("x-forwarded-for") || "unknown",
+          ua: request.headers.get("user-agent") || "unknown",
+          meta: {
+            membershipId: membershipId,
+            removedUser: membership.user.name,
+            removedUserEmail: membership.user.email,
+            role: membership.role
+          }
+        }
+      });
     });
 
     return NextResponse.json({
@@ -167,7 +185,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<APIResp
     console.error("Remove member error:", error);
     return NextResponse.json({
       success: false,
-      errors: { _form: [error instanceof Error ? error.message : "Failed to remove member"] }
+      errors: { _form: ["Failed to remove member"] }
     }, { status: 500 });
   }
 }

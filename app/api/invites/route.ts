@@ -158,7 +158,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const orgId = searchParams.get('org_id');
 
     if (orgId) {
-      // Get invitations for a specific organization (for admins/owners)
       const canViewInvites = await prisma.membership.findFirst({
         where: {
           user_id: session.user.id,
@@ -208,7 +207,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       });
 
     } else {
-      // Get invitations sent to the current user
       const invitations = await prisma.invite.findMany({
         where: {
           email: session.user.email,

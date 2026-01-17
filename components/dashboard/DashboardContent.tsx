@@ -15,6 +15,7 @@ import { UnifiedVaultList } from "../vaults/ItemList";
 interface DashboardContentProps {
   activeTab: string;
   user: User;
+  currentOrgId?: string;
 }
 
 const ContentWrapper: React.FC<{ children: React.ReactNode }> = ({
@@ -24,6 +25,7 @@ const ContentWrapper: React.FC<{ children: React.ReactNode }> = ({
 export const DashboardContent: React.FC<DashboardContentProps> = ({
   activeTab,
   user,
+  currentOrgId,
 }) => {
   const renderContent = () => {
     switch (activeTab as DashboardTab) {
@@ -44,12 +46,17 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
         return <VaultSetting />;
 
       case "Members":
-        // @ts-expect-error TS(2322): Type 'string | undefined' is not assignable to type 'n... --- IGNORE ---
+        // @ts-expect-error orgId is guaranteed to be defined here
         return <TeamManagement vault={user.vault} user={user} />;
 
       case "Manage":
-        // @ts-expect-error TS(2322): Type 'string | undefined' is not assignable to type 'n... --- IGNORE ---
-        return <OrganizationManagement user={user} orgId={user.org?.id} />;
+        return (
+          <OrganizationManagement 
+            user={user} 
+            orgId={currentOrgId || user.org?.id || ''} 
+            key={currentOrgId || user.org?.id}
+          />
+        );
 
       case "Active":
         return <NotificationBadge />;

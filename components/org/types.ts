@@ -4,16 +4,21 @@ export interface OrganizationMember {
   id: string;
   user_id: string;
   org_id: string;
-  role: "owner" | "admin" | "member" | "viewer";
-  ovk_wrapped_for_user: string;
-  created_at: string;
+  role: 'owner' | 'admin' | 'member' | 'viewer';
+  created_at: string | Date;
+  ovk_wrapped_for_user?: string;
+  org_name?: string;
   user: {
     id: string;
-    name: string;
-    email: string;
-    image?: string;
+    name: string | null;
+    email: string | null;
+    image: string | null;
   };
-  teams?: Team[];
+  org?: {
+    id: string;
+    name: string;
+    owner_user_id: string;
+  };
 }
 
 export interface TeamWithMembers extends Team {

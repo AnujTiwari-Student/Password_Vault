@@ -1,4 +1,3 @@
-// app/api/invites/accept/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/db";
 import { auth } from "@/lib/auth";

@@ -22,6 +22,9 @@ interface MembersTabProps {
   setSelectedMember: (member: OrganizationMember) => void;
   setShowRoleModal: (show: boolean) => void;
   setShowRemoveMemberModal: (show: boolean) => void;
+  selectedMembers: Set<string>;
+  toggleMemberSelection: (id: string) => void;
+  selectAllMembers: () => void;
 }
 
 export const MembersTab: React.FC<MembersTabProps> = ({
@@ -34,6 +37,9 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   setSelectedMember,
   setShowRoleModal,
   setShowRemoveMemberModal,
+  selectedMembers,
+  toggleMemberSelection,
+  selectAllMembers,
 }) => {
   const filteredMembers = members.filter((member) => {
     const matchesSearch =
@@ -42,6 +48,8 @@ export const MembersTab: React.FC<MembersTabProps> = ({
     const matchesRole = roleFilter === "all" || member.role === roleFilter;
     return matchesSearch && matchesRole;
   });
+
+  console.log("Rendering MembersTab with selectedMembers:", selectAllMembers);
 
   return (
     <div>
@@ -87,6 +95,8 @@ export const MembersTab: React.FC<MembersTabProps> = ({
         setSelectedMember={setSelectedMember}
         setShowRoleModal={setShowRoleModal}
         setShowRemoveMemberModal={setShowRemoveMemberModal}
+        selectedMembers={selectedMembers}
+        toggleMemberSelection={toggleMemberSelection}
       />
     </div>
   );

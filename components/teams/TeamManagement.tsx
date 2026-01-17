@@ -7,7 +7,8 @@ import { Vault, User } from "@/types/vault";
 import { APIResponse } from "@/types/api-responses";
 import { AddMemberModal } from "./AddMemberModal";
 import Image from "next/image";
-import { toast } from "sonner";
+// import { toast } from "sonner";
+import { MemberDetailsModal } from "../organization/MemberDetailsModal";
 
 interface TeamManagementProps {
   vault: Vault | null | undefined;
@@ -27,6 +28,11 @@ interface OrganizationMember {
     email: string;
     image?: string;
   };
+  org?: {
+    id: string;
+    name: string;
+    owner_user_id: string;
+  };
 }
 
 interface MembersResponse {
@@ -41,15 +47,16 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
   const [membersLoading, setMembersLoading] = useState<boolean>(true);
   const [showAddMember, setShowAddMember] = useState<boolean>(false);
   const [membersError, setMembersError] = useState<string | null>(null);
+  const [selectedMemberForDetails, setSelectedMemberForDetails] =
+    useState<OrganizationMember | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const hasValidVault = vault && vault.id;
   const hasValidOrg = vault?.org_id && user?.org?.id;
   const isOrgVault = vault?.type === "org";
-  const orgId = user?.org?.id;
-  const vaultOrgId = vault?.org_id;
 
   const fetchOrgMembers = useCallback(async (): Promise<void> => {
-    if (!orgId) {
+    if (!user?.id) {
       setMembersLoading(false);
       return;
     }
@@ -58,12 +65,31 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
       setMembersError(null);
       setMembersLoading(true);
 
+      console.log("=== FETCH MEMBERS START (TeamManagement) ===");
+      console.log("Fetching members for all user's organizations");
+      console.log("User:", user?.name, "User ID:", user?.id);
+
       const response = await axios.get<APIResponse<MembersResponse>>(
-        `/api/members?org_id=${orgId}`
+        `/api/members/all-orgs?user_id=${user.id}`
       );
+
+      console.log("API Response success:", response.data.success);
 
       if (response.data.success && response.data.data) {
         const membersData = response.data.data.members || [];
+        console.log("Total member entries fetched:", membersData.length);
+        console.log(
+          "Members details:",
+          membersData.map((m) => ({
+            name: m.user?.name,
+            email: m.user?.email,
+            org_id: m.org_id,
+            org_name: m.org?.name,
+            membership_id: m.id,
+            role: m.role,
+          }))
+        );
+
         setOrgMembers(membersData);
       } else {
         setMembersError(
@@ -72,6 +98,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
         );
         setOrgMembers([]);
       }
+      console.log("=== FETCH MEMBERS END ===");
     } catch (error) {
       console.error("Failed to fetch organization members:", error);
 
@@ -94,15 +121,15 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
     } finally {
       setMembersLoading(false);
     }
-  }, [orgId]);
+  }, [user?.id, user?.name]);
 
   useEffect(() => {
-    if (hasValidVault && hasValidOrg && vaultOrgId) {
+    if (hasValidVault && hasValidOrg) {
       fetchOrgMembers();
     } else {
       setMembersLoading(false);
     }
-  }, [hasValidVault, hasValidOrg, vaultOrgId, fetchOrgMembers]);
+  }, [hasValidVault, hasValidOrg, fetchOrgMembers]);
 
   const handleMemberAdded = (): void => {
     fetchOrgMembers();
@@ -114,42 +141,47 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
     fetchOrgMembers();
   };
 
-  //  eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleRemoveMember = async (memberId: string, memberName: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to remove ${memberName} from the organization?`
-      )
-    ) {
-      return;
-    }
+  // const handleRemoveMember = async (memberId: string, memberName: string, orgName: string) => {
+  //   if (
+  //     !confirm(
+  //       `Are you sure you want to remove ${memberName} from ${orgName}?`
+  //     )
+  //   ) {
+  //     return;
+  //   }
 
-    try {
-      const response = await axios.delete<APIResponse>(
-        `/api/members?id=${memberId}`
-      );
+  //   try {
+  //     const member = orgMembers.find(m => m.id === memberId);
+  //     if (!member) {
+  //       toast.error("Member not found");
+  //       return;
+  //     }
 
-      if (response.data.success) {
-        toast.success("Member removed successfully");
-        fetchOrgMembers();
-      } else {
-        const errorMsg =
-          response.data.errors?._form?.[0] || "Failed to remove member";
-        toast.error(errorMsg);
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorMsg =
-          error.response?.data?.errors?._form?.[0] ||
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to remove member";
-        toast.error(errorMsg);
-      } else {
-        toast.error("An unexpected error occurred");
-      }
-    }
-  };
+  //     const response = await axios.delete<APIResponse>(
+  //       `/api/members?id=${memberId}&org_id=${member.org_id}`
+  //     );
+
+  //     if (response.data.success) {
+  //       toast.success(`Member removed from ${orgName} successfully`);
+  //       fetchOrgMembers();
+  //     } else {
+  //       const errorMsg =
+  //         response.data.errors?._form?.[0] || "Failed to remove member";
+  //       toast.error(errorMsg);
+  //     }
+  //   } catch (error) {
+  //     if (axios.isAxiosError(error)) {
+  //       const errorMsg =
+  //         error.response?.data?.errors?._form?.[0] ||
+  //         error.response?.data?.message ||
+  //         error.message ||
+  //         "Failed to remove member";
+  //       toast.error(errorMsg);
+  //     } else {
+  //       toast.error("An unexpected error occurred");
+  //     }
+  //   }
+  // };
 
   if (!vault) {
     return (
@@ -272,7 +304,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
                 )}
               </h3>
               <p className="text-xs text-gray-500 mt-0.5">
-                Members with access to {vault?.name || "this vault"}
+                Members across all your organizations
               </p>
             </div>
             <button
@@ -327,79 +359,84 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {orgMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between p-4 bg-gray-750 rounded-lg hover:bg-gray-700/70 transition-all border border-gray-700/50 hover:border-gray-600"
-                >
-                  <div className="flex items-center gap-3">
-                    {member.user?.image ? (
-                      <Image
-                        src={member.user.image}
-                        alt={member.user?.name || "User"}
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-600/50 rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5 text-gray-400" />
+              {orgMembers.map((member) => {
+                const orgName = member.org?.name || "";
+                return (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between p-4 bg-gray-750 rounded-lg hover:bg-gray-700/70 transition-all border border-gray-700/50 hover:border-gray-600 cursor-pointer"
+                    onClick={() => {
+                      setSelectedMemberForDetails(member);
+                      setShowDetailsModal(true);
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {member.user?.image ? (
+                        <Image
+                          src={member.user.image}
+                          alt={member.user?.name || "User"}
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-600/50 rounded-full flex items-center justify-center">
+                          <Users className="w-5 h-5 text-gray-400" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-white">
+                            {member.user?.name || "Unknown User"}
+                          </p>
+                          {orgName && (
+                            <span className="text-xs font-medium text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded">
+                              {orgName}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {member.user?.email || "No email"}
+                        </p>
                       </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {member.user?.name || "Unknown User"}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {member.user?.email || "No email"}
-                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`px-3 py-1.5 text-xs rounded-lg font-semibold ${
+                          member.role === "owner"
+                            ? "bg-yellow-900/30 text-yellow-300 border-yellow-700/30 border"
+                            : member.role === "admin"
+                            ? "bg-blue-900/30 text-blue-300 border-blue-700/30 border"
+                            : member.role === "member"
+                            ? "bg-green-900/30 text-green-300 border-green-700/30 border"
+                            : "bg-gray-700/50 text-gray-400"
+                        }`}
+                      >
+                        {member.role}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`px-3 py-1.5 text-xs rounded-lg font-semibold ${
-                        member.role === "owner"
-                          ? "bg-yellow-900/30 text-yellow-300 border-yellow-700/30 border"
-                          : member.role === "admin"
-                          ? "bg-blue-900/30 text-blue-300 border-blue-700/30 border"
-                          : member.role === "member"
-                          ? "bg-green-900/30 text-green-300 border-green-700/30 border"
-                          : "bg-gray-700/50 text-gray-400"
-                      }`}
-                    >
-                      {member.role}
-                    </span>
-                    {/* {member.role !== "owner" &&
-                      member.user_id !== user?.id && (
-                        <button
-                          onClick={() =>
-                            handleRemoveMember(
-                              member.id,
-                              member.user?.name || "this member"
-                            )
-                          }
-                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
-                          title="Remove member"
-                        >
-                          <UserX className="w-4 h-4" />
-                        </button>
-                      )} */}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
+              <MemberDetailsModal
+                isOpen={showDetailsModal}
+                onClose={() => {
+                  setShowDetailsModal(false);
+                  setSelectedMemberForDetails(null);
+                }}
+                // @ts-expect-error passing OrganizationMember
+                member={selectedMemberForDetails}
+              />
             </div>
           )}
         </div>
       </div>
 
-      {orgId && (
-        <AddMemberModal
-          isOpen={showAddMember}
-          onClose={() => setShowAddMember(false)}
-          onMemberAdded={handleMemberAdded}
-          orgId={orgId}
-        />
-      )}
+      <AddMemberModal
+        isOpen={showAddMember}
+        onClose={() => setShowAddMember(false)}
+        onMemberAdded={handleMemberAdded}
+      />
     </div>
   );
 };

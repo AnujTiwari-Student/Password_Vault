@@ -26,6 +26,8 @@ interface RemoveMemberModalProps {
   isPending: boolean;
   startTransition: React.TransitionStartFunction;
   fetchMembers: () => Promise<void>;
+  userId: string;
+  currentOrgId: string;
 }
 
 export const RemoveMemberModal: React.FC<RemoveMemberModalProps> = ({
@@ -40,27 +42,47 @@ export const RemoveMemberModal: React.FC<RemoveMemberModalProps> = ({
   isPending,
   startTransition,
   fetchMembers,
+  userId,
+  currentOrgId,
 }) => {
+
   const handleRemoveMember = async (): Promise<void> => {
-    if (!selectedMember) return;
+    if (!selectedMember) {
+      setError("No member selected");
+      return;
+    }
+
+    console.log(userId, currentOrgId);
 
     startTransition(async () => {
       try {
         setError(null);
         setSuccess(null);
 
-        const url = `/api/members?id=${selectedMember.id}`;
+        const url = `/api/members?id=${selectedMember.id}&org_id=${selectedMember.org_id}`;
         console.log("DELETE URL:", url);
-        console.log("Member ID:", selectedMember.id);
+        console.log("Membership ID:", selectedMember.id);
+        console.log("Organization ID:", selectedMember.org_id);
 
         const response = await axios.delete<APIResponse>(url);
 
         if (response.data.success) {
-          setSuccess("Member removed from organization successfully!");
-          toast.success("Member removed successfully!");
+          const orgName = selectedMember.org?.name || '';
+          const successMsg = orgName 
+            ? `Member removed from ${orgName} successfully!`
+            : "Member removed successfully!";
+          
+          console.log("Member removed successfully");
+          setSuccess(successMsg);
+          toast.success(successMsg);
+          
           await fetchMembers();
-          setShowRemoveMemberModal(false);
-          setSelectedMember(null);
+          
+          setTimeout(() => {
+            setShowRemoveMemberModal(false);
+            setSelectedMember(null);
+            setSuccess(null);
+          }, 1000);
         } else {
           const errorMessage =
             response.data.errors?._form?.[0] || "Failed to remove member";
@@ -77,16 +99,27 @@ export const RemoveMemberModal: React.FC<RemoveMemberModalProps> = ({
         } else if (error instanceof Error) {
           errorMessage = error.message;
         }
+        console.error("Remove member error:", error);
         setError(errorMessage);
         toast.error(errorMessage);
       }
     });
   };
 
+  const handleClose = () => {
+    setShowRemoveMemberModal(false);
+    setSelectedMember(null);
+    setError(null);
+    setSuccess(null);
+  };
+
+  const orgName = selectedMember?.org?.name || '';
+  const memberName = selectedMember?.user?.name || "this member";
+
   return (
     <Dialog
       open={showRemoveMemberModal}
-      onOpenChange={setShowRemoveMemberModal}
+      onOpenChange={handleClose}
     >
       <DialogContent className="sm:max-w-md bg-gray-900 border-gray-700 text-white">
         <DialogHeader>
@@ -97,16 +130,15 @@ export const RemoveMemberModal: React.FC<RemoveMemberModalProps> = ({
         </DialogHeader>
 
         <div className="space-y-5">
-          {selectedMember && (
+          {selectedMember && orgName && (
             <div className="p-4 bg-red-900/20 border border-red-700/30 rounded-lg">
               <p className="text-sm font-semibold text-white mb-2">
-                Are you sure you want to remove{" "}
-                {selectedMember.user?.name || "this member"} from the
-                organization?
+                Are you sure you want to remove <strong>{memberName}</strong> from{" "}
+                <strong>{orgName}</strong>?
               </p>
               <p className="text-xs text-red-300">
                 This action cannot be undone. They will lose access to all
-                organization resources.
+                resources in this organization.
               </p>
             </div>
           )}
@@ -117,12 +149,7 @@ export const RemoveMemberModal: React.FC<RemoveMemberModalProps> = ({
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => {
-                setShowRemoveMemberModal(false);
-                setSelectedMember(null);
-                setError(null);
-                setSuccess(null);
-              }}
+              onClick={handleClose}
               className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
               disabled={isPending}
             >
@@ -131,7 +158,7 @@ export const RemoveMemberModal: React.FC<RemoveMemberModalProps> = ({
             <Button
               onClick={handleRemoveMember}
               className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-              disabled={isPending}
+              disabled={isPending || !selectedMember}
             >
               {isPending ? (
                 <div className="flex items-center gap-2">

@@ -11,6 +11,8 @@ interface MembersListProps {
   setSelectedMember: (member: OrganizationMember) => void;
   setShowRoleModal: (show: boolean) => void;
   setShowRemoveMemberModal: (show: boolean) => void;
+  selectedMembers: Set<string>;
+  toggleMemberSelection: (id: string) => void;
 }
 
 export const MembersList: React.FC<MembersListProps> = ({
@@ -20,6 +22,8 @@ export const MembersList: React.FC<MembersListProps> = ({
   setSelectedMember,
   setShowRoleModal,
   setShowRemoveMemberModal,
+  selectedMembers,
+  toggleMemberSelection,
 }) => {
   return (
     <div>
@@ -52,6 +56,8 @@ export const MembersList: React.FC<MembersListProps> = ({
               setSelectedMember={setSelectedMember}
               setShowRoleModal={setShowRoleModal}
               setShowRemoveMemberModal={setShowRemoveMemberModal}
+              isSelected={selectedMembers.has(member.id)}
+              onToggleSelect={toggleMemberSelection}
             />
           ))}
         </div>
