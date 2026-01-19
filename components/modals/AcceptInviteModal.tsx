@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { Key, Building2, Crown, Shield, Users, Check, X, AlertCircle } from 'lucide-react';
 import axios from 'axios';

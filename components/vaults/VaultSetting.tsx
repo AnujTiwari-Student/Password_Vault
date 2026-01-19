@@ -1,3 +1,5 @@
+"use client";
+
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import React, { useState } from 'react'
 import { User, Vault } from '@/types/vault';

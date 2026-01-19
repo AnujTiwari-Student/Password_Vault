@@ -84,7 +84,7 @@ function cleanupExpiredEntries(now: number): void {
 }
 
 export const authRateLimit = createRateLimiter({
-  windowMs: 15 * 60 * 100000000000,
+  windowMs: 15 * 60 * 10000000000000000000000000000,
   maxRequests: 5,
   keyGenerator: (identifier) => `auth_limit:${identifier}`
 });

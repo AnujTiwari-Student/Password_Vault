@@ -89,7 +89,6 @@ export async function POST(request: Request) {
           },
         });
 
-        // 4️⃣ Membership (OWNER)
         await tx.membership.create({
           data: {
             org_id: newOrg.id,
@@ -99,7 +98,6 @@ export async function POST(request: Request) {
           },
         });
 
-        // 5️⃣ Org Vault Key
         const orgVaultKey = await tx.orgVaultKey.create({
           data: {
             org_id: newOrg.id,
@@ -107,7 +105,6 @@ export async function POST(request: Request) {
           },
         });
 
-        // 6️⃣ ORG Vault (🔥 FIXED HERE 🔥)
         const vault = await tx.vault.create({
           data: {
             org_id: newOrg.id,
@@ -115,11 +112,10 @@ export async function POST(request: Request) {
             type: "org",
             ovk_id: orgVaultKey.id,
             orgVaultKeyId: orgVaultKey.id,
-            created_by: userId, // ✅ REQUIRED FIX
+            created_by: userId, 
           },
         });
 
-        // 7️⃣ Audit log
         await tx.audit.create({
           data: {
             org_id: newOrg.id,
@@ -138,9 +134,7 @@ export async function POST(request: Request) {
         });
       }
 
-      // ================= PERSONAL ACCOUNT =================
       else if (account_type === "personal") {
-        // 8️⃣ Personal vault key
         const personalVaultKey = await tx.personalVaultKey.create({
           data: {
             user_id: userId,
@@ -148,7 +142,6 @@ export async function POST(request: Request) {
           },
         });
 
-        // 9️⃣ Personal vault (🔥 FIXED HERE 🔥)
         const vault = await tx.vault.create({
           data: {
             name: "Personal Vault",
@@ -156,7 +149,7 @@ export async function POST(request: Request) {
             user_id: userId,
             ovk_id: personalVaultKey.id,
             personalVaultKeyId: personalVaultKey.id,
-            created_by: userId, // ✅ REQUIRED FIX
+            created_by: userId, 
           },
         });
 

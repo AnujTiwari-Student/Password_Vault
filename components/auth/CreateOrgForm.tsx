@@ -1,3 +1,5 @@
+"use client";
+
 import { CreateOrgSchema } from "@/schema/zod-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React from "react";
@@ -14,8 +16,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { 
   generateRandomBytes, 
   bufferToBase64, 
-  deriveUMKData, 
-  wrapKey 
+  encryptWithRSA
 } from "@/utils/client-crypto";
 import axios from "axios";
 
@@ -61,8 +62,7 @@ function CreateOrgForm({ onSuccess, onClose }: CreateOrgFormProps) {
         const ovkRaw = generateRandomBytes(32);
         const ovkRawBase64 = bufferToBase64(ovkRaw);
         
-        const umkData = await deriveUMKData(data.masterPassphrase, user.umk_salt);
-        const ovkWrappedForUser = await wrapKey(ovkRawBase64, umkData.umkCryptoKey);
+        const ovkWrappedForUser = await encryptWithRSA(ovkRawBase64, user.public_key as string);
 
         const response = await axios.post('/api/orgs/data', {
           name: data.name,

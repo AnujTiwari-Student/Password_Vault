@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { Database, AlertCircle, Loader2 } from 'lucide-react';
 import { Vault, User } from '@/types/vault';

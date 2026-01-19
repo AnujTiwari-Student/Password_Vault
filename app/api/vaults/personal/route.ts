@@ -21,8 +21,6 @@ export async function GET(req: NextRequest) {
     const vault = await prisma.vault.findFirst({
       where: {
         id: vaultId,
-        user_id: user.id,
-        type: 'personal'
       },
       include: {
         personalVaultKey: {
@@ -35,8 +33,20 @@ export async function GET(req: NextRequest) {
 
     if (!vault) {
       return NextResponse.json({ 
-        error: 'Personal vault not found' 
+        error: 'Vault not found' 
       }, { status: 404 });
+    }
+
+    if (vault.type !== 'personal') {
+      return NextResponse.json({ 
+        error: `This vault is not a personal vault (type: ${vault.type})` 
+      }, { status: 400 });
+    }
+
+    if (vault.created_by !== user.id) {
+      return NextResponse.json({ 
+        error: 'You do not own this personal vault' 
+      }, { status: 403 });
     }
 
     if (!vault.personalVaultKey?.ovk_cipher) {
@@ -51,7 +61,8 @@ export async function GET(req: NextRequest) {
       vault_name: vault.name
     }, { status: 200 });
 
-  } catch {
+  } catch (error) {
+    console.error('Personal vault fetch error:', error);
     return NextResponse.json({ 
       error: 'Internal Server Error'
     }, { status: 500 });

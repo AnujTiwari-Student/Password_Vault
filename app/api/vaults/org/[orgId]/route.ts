@@ -15,8 +15,6 @@ export async function GET(
     const params = await context.params;
     const { orgId } = params;
 
-    console.log('🔐 [/api/vaults/org/[orgId]] Called:', { orgId, userId: user.id });
-
     const membership = await prisma.membership.findFirst({
       where: {
         user_id: user.id,
@@ -65,7 +63,7 @@ export async function GET(
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Org vault fetch error:', error);
+    console.error('Org vault fetch error:', error);
     return NextResponse.json({ 
       message: 'Internal Server Error',
       error: process.env.NODE_ENV === 'development' ? String(error) : undefined
