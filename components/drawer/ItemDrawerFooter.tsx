@@ -8,25 +8,24 @@ interface ItemDrawerFooterProps {
 
 export const ItemDrawerFooter: React.FC<ItemDrawerFooterProps> = ({ onClose, onEdit }) => {
   return (
-    <div className="p-4 sm:p-6 border-t border-gray-700/50 bg-gray-850/80 backdrop-blur-sm">
-      <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
-        <button
-          onClick={onClose}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 text-gray-300 rounded-xl hover:bg-gray-700/80 transition-all duration-200 hover:scale-105 active:scale-95"
+    <div className="p-4 sm:px-6 sm:py-5 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row justify-end items-center gap-3 shrink-0">
+      <button
+        onClick={onClose}
+        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+      >
+        <X className="w-4 h-4" />
+        <span>Close</span>
+      </button>
+      
+      {onEdit && (
+        <button 
+          onClick={onEdit}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 border border-transparent text-white text-sm font-medium rounded-lg hover:bg-gray-800 shadow-sm transition-all hover:shadow-md"
         >
-          <X className="w-4 h-4" />
-          <span className="text-sm sm:text-base">Close</span>
+          <Edit3 className="w-4 h-4" />
+          <span>Edit Item</span>
         </button>
-        {onEdit && (
-          <button 
-            onClick={onEdit}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600/90 backdrop-blur-sm border border-blue-500/50 text-white rounded-xl hover:bg-blue-700/90 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/25"
-          >
-            <Edit3 className="w-4 h-4" />
-            <span className="text-sm sm:text-base">Edit</span>
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 };

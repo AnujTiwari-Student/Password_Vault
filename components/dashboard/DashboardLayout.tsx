@@ -16,7 +16,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   setActiveTab,
 }) => {
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex">
+    <div className="min-h-screen text-white flex">
       <AppSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}

@@ -32,7 +32,7 @@ export const SEVERITY_MAP: Record<string, 'low' | 'medium' | 'high' | 'critical'
 };
 
 export const SEVERITY_COLORS: Record<string, string> = {
-  low: 'bg-green-900 text-green-300',
+  low: 'bg-emerald-500/15 text-emerald-500',
   medium: 'bg-blue-900 text-blue-300',
   high: 'bg-yellow-900 text-yellow-300',
   critical: 'bg-red-900 text-red-300',

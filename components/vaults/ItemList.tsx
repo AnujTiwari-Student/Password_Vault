@@ -1,6 +1,5 @@
 "use client";
 
-
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import axios from "axios";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -8,7 +7,6 @@ import { useSearchParams } from "next/navigation";
 import {
   Search,
   Filter,
-  Grid,
   List,
   Plus,
   Loader2,
@@ -20,13 +18,14 @@ import {
   FileText,
   AlertCircle,
   X,
+  LayoutGrid,
+  FolderOpen
 } from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { canUserEdit } from "@/utils/permission-utils";
@@ -35,17 +34,14 @@ import { ExtendedUser, MemberWithOrg } from "@/types/user";
 import { ViewItemModal } from "@/components/modals/ViewItemModal";
 import AddingItemsModal from "../modals/AddingItems";
 
-
 type VaultType = "personal" | "org";
 type ItemType = "login" | "note" | "totp";
 type UserRole = "owner" | "admin" | "member" | "viewer";
-
 
 export const UnifiedVaultList: React.FC = () => {
   const user = useCurrentUser() as ExtendedUser | null;
   const searchParams = useSearchParams();
   const orgIdFromUrl = searchParams.get("org");
-
 
   const [vaultType, setVaultType] = useState<VaultType>("personal");
   const [items, setItems] = useState<APIVaultItem[]>([]);
@@ -60,56 +56,29 @@ export const UnifiedVaultList: React.FC = () => {
   const [isFetching, setIsFetching] = useState(false);
   const [fetchedRole, setFetchedRole] = useState<UserRole | null>(null);
 
-
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<APIVaultItem | null>(null);
 
-
-  useEffect(() => {
-    if (user) {
-      console.log('👤 USER OBJECT:', JSON.stringify(user, null, 2));
-    }
-  }, [user]);
-
-
   const hasOrgAccess = useMemo(() => {
-    if (user?.org?.id) {
-      console.log('✅ User owns org:', user.org.id);
-      return true;
-    }
-    
-    if (user?.member) {
-      console.log('✅ User has member data');
-      return true;
-    }
-    
-    console.log('❌ No org access');
+    if (user?.org?.id) return true;
+    if (user?.member) return true;
     return false;
   }, [user]);
-
 
   const isOrgOnlyAccount = useMemo(() => {
     const isOrgOwner = user?.account_type === 'org';
     const hasPersonalVault = !!user?.vault?.id;
-    console.log('🔍 Account check:', { isOrgOwner, hasPersonalVault, isOrgOnly: isOrgOwner && !hasPersonalVault });
     return isOrgOwner && !hasPersonalVault;
   }, [user]);
 
-
   const showPersonalVault = useMemo(() => {
-    const show = !!user?.vault?.id;
-    console.log('🔍 Show personal vault:', show);
-    return show;
+    return !!user?.vault?.id;
   }, [user]);
 
-
   const showVaultSelector = useMemo(() => {
-    const show = showPersonalVault && hasOrgAccess;
-    console.log('🔍 Show vault selector:', show);
-    return show;
+    return showPersonalVault && hasOrgAccess;
   }, [showPersonalVault, hasOrgAccess]);
-
 
   useEffect(() => {
     if (isOrgOnlyAccount) {
@@ -123,202 +92,107 @@ export const UnifiedVaultList: React.FC = () => {
     }
   }, [orgIdFromUrl, hasOrgAccess, isOrgOnlyAccount, showPersonalVault]);
 
-
   const currentOrgId = useMemo(() => {
     if (vaultType === "org") {
-      if (orgIdFromUrl) {
-        console.log('🔍 Using org from URL:', orgIdFromUrl);
-        return orgIdFromUrl;
-      }
-      
-      if (user?.org?.id) {
-        console.log('🔍 Using owned org:', user.org.id);
-        return user.org.id;
-      }
-      
+      if (orgIdFromUrl) return orgIdFromUrl;
+      if (user?.org?.id) return user.org.id;
       if (user?.member) {
         const members = Array.isArray(user.member) ? user.member : [user.member];
         const orgId = members[0]?.org_id;
-        console.log('🔍 Using member org:', orgId);
         return orgId || null;
       }
     }
     return null;
   }, [vaultType, user, orgIdFromUrl]);
 
-
   useEffect(() => {
     const fetchOrgVault = async () => {
       if (vaultType === "org" && currentOrgId) {
         setOrgVaultId(null);
         setFetchedRole(null);
-        
         try {
-          console.log('📡 Fetching org vault for org:', currentOrgId);
           const response = await axios.get(`/api/vaults/org/${currentOrgId}`);
           if (response.data.vault?.id) {
             setOrgVaultId(response.data.vault.id);
-            console.log('✅ Org vault ID fetched:', response.data.vault.id);
-            
             if (response.data.membership?.role) {
               setFetchedRole(response.data.membership.role as UserRole);
-              console.log('✅ Role fetched:', response.data.membership.role);
             }
           }
         } catch (error) {
-          if (axios.isAxiosError(error)) {
-            console.error("❌ Failed to fetch org vault:", error.response?.data || error.message);
-          } else {
-            console.error("❌ Failed to fetch org vault:", error);
-          }
+          setError("Failed to fetch org vault");
+          console.error("Failed to fetch org vault", error);
         }
       }
     };
-
-
     fetchOrgVault();
   }, [vaultType, currentOrgId]);
 
-
   const vaultId = useMemo(() => {
     if (vaultType === "personal") {
-      const id = user?.vault?.id || null;
-      console.log('🔍 Personal vault ID:', id);
-      return id;
+      return user?.vault?.id || null;
     } else {
-      if (orgVaultId) {
-        console.log('🔍 Org vault ID (fetched):', orgVaultId);
-        return orgVaultId;
-      }
-
-
-      if (user?.org?.vault_id) {
-        console.log('🔍 Org vault ID (from user.org):', user.org.vault_id);
-        return user.org.vault_id;
-      }
-
-
-      console.log('❌ No vault ID found');
+      if (orgVaultId) return orgVaultId;
+      if (user?.org?.vault_id) return user.org.vault_id;
       return null;
     }
   }, [vaultType, user, orgVaultId]);
 
-
   const userRole = useMemo((): UserRole | null => {
-    if (vaultType === "personal") {
-      console.log('🔍 Personal vault role: owner');
-      return "owner";
-    }
-    
-    if (fetchedRole) {
-      console.log('🔍 Using fetched role:', fetchedRole);
-      return fetchedRole;
-    }
-    
-    if (user?.org?.id === currentOrgId && user?.org?.owner_user_id === user?.id) {
-      console.log('🔍 Org role: owner (owns org)');
-      return "owner";
-    }
-    
+    if (vaultType === "personal") return "owner";
+    if (fetchedRole) return fetchedRole;
+    if (user?.org?.id === currentOrgId && user?.org?.owner_user_id === user?.id) return "owner";
     if (user?.member) {
       const members = Array.isArray(user.member) ? user.member : [user.member];
       const member = members.find((m: MemberWithOrg) => m.org_id === currentOrgId);
       const role = member?.role as UserRole | undefined;
-      console.log('🔍 Org role (from member):', role);
       return role || null;
     }
-    
-    console.log('❌ No role found, defaulting to owner for org account');
-    if (user?.account_type === 'org' && user?.org?.id === currentOrgId) {
-      return 'owner';
-    }
-    
+    if (user?.account_type === 'org' && user?.org?.id === currentOrgId) return 'owner';
     return null;
   }, [vaultType, user, currentOrgId, fetchedRole]);
 
-
   const canEdit = useMemo(() => {
-    const result = userRole ? canUserEdit(userRole) : false;
-    console.log('🔍 Can edit:', result, 'Role:', userRole);
-    return result;
+    return userRole ? canUserEdit(userRole) : false;
   }, [userRole]);
-
 
   const fetchItems = useCallback(async () => {
     if (!vaultId) {
       setLoading(false);
       setIsFetching(false);
-      console.log('❌ No vault ID, skipping fetch');
       return;
     }
-
-
     setIsFetching(true);
     setLoading(true);
-
-
     try {
       let endpoint = "";
       let params: Record<string, string> = {};
-
-
       if (vaultType === "personal") {
         endpoint = "/api/items";
         params = { id: vaultId };
       } else {
-        if (!currentOrgId) {
-          throw new Error("Organization ID is missing");
-        }
+        if (!currentOrgId) throw new Error("Organization ID is missing");
         endpoint = "/api/items/member-items";
         params = {
           vault_id: vaultId,
           org_id: currentOrgId,
         };
       }
-
-
-      console.log("📡 Fetching items:", { endpoint, params, vaultType });
-
-
       const queryString = new URLSearchParams(params).toString();
       const response = await axios.get(`${endpoint}?${queryString}`);
-
-
       setItems(response.data.items || []);
       setError(null);
-      
       if (response.data.user_role && !fetchedRole) {
-        console.log('✅ Got role from items API:', response.data.user_role);
         setFetchedRole(response.data.user_role as UserRole);
       }
-      
-      console.log("✅ Items loaded:", response.data.items?.length || 0);
     } catch (error) {
-      console.error("❌ Failed to fetch items:", error);
-
-
-      let errorMessage = "Failed to load vault items";
-
-
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 400) {
-          errorMessage = error.response?.data?.message || "Invalid request.";
-        } else if (error.response?.status === 403) {
-          errorMessage = error.response?.data?.message || "Access denied";
-        } else if (error.response?.status === 404) {
-          errorMessage = error.response?.data?.message || "Vault not found";
-        }
-      }
-
-
-      setError(errorMessage);
+      console.error("Failed to fetch vault items", error);
+      setError("Failed to load vault items");
       setItems([]);
     } finally {
       setLoading(false);
       setIsFetching(false);
     }
   }, [vaultId, vaultType, currentOrgId, fetchedRole]);
-
 
   useEffect(() => {
     if (user && vaultId) {
@@ -330,15 +204,12 @@ export const UnifiedVaultList: React.FC = () => {
     }
   }, [user, vaultId, fetchItems]);
 
-
   const handleItemClick = (item: APIVaultItem) => {
     setSelectedItem(item);
     setShowViewModal(true);
   };
 
-
   const handleAddItem = () => {
-    console.log('🔘 Add button clicked. canEdit:', canEdit, 'vaultId:', vaultId, 'userRole:', userRole);
     if (!canEdit) {
       toast.error("You do not have permission to add items");
       return;
@@ -350,13 +221,11 @@ export const UnifiedVaultList: React.FC = () => {
     setShowAddModal(true);
   };
 
-
   const handleVaultTypeChange = (newType: VaultType) => {
     if (newType === "org" && !hasOrgAccess) {
       toast.error("You are not a member of any organization");
       return;
     }
-    console.log('🔄 Switching vault type to:', newType);
     setVaultType(newType);
     setSearchTerm("");
     setSelectedType("all");
@@ -366,7 +235,6 @@ export const UnifiedVaultList: React.FC = () => {
     setFetchedRole(null);
     setItems([]);
   };
-
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -383,7 +251,6 @@ export const UnifiedVaultList: React.FC = () => {
     });
   }, [items, searchTerm, selectedType, selectedTag]);
 
-
   const availableTags = useMemo(() => {
     const tags = new Set<string>();
     items.forEach((item) => {
@@ -393,486 +260,447 @@ export const UnifiedVaultList: React.FC = () => {
     return Array.from(tags).sort();
   }, [items]);
 
-
   const getItemIcon = (type: ItemType[]) => {
     if (type.includes("login"))
-      return <Globe className="w-5 h-5 text-blue-400" />;
+      return <Globe className="w-5 h-5 text-blue-600" />;
     if (type.includes("totp"))
-      return <Shield className="w-5 h-5 text-green-400" />;
+      return <Shield className="w-5 h-5 text-emerald-600" />;
     if (type.includes("note"))
-      return <FileText className="w-5 h-5 text-purple-400" />;
+      return <FileText className="w-5 h-5 text-purple-600" />;
     return <Lock className="w-5 h-5 text-gray-400" />;
   };
-
 
   const getTypeColor = (type: string) => {
     switch (type) {
       case "login":
-        return "bg-blue-900/30 text-blue-300 border-blue-700/30";
+        return "bg-blue-50 text-blue-700 border-blue-200";
       case "note":
-        return "bg-purple-900/30 text-purple-300 border-purple-700/30";
+        return "bg-purple-50 text-purple-700 border-purple-200";
       case "totp":
-        return "bg-green-900/30 text-green-300 border-green-700/30";
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
       default:
-        return "bg-gray-900/30 text-gray-300 border-gray-700/30";
+        return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
 
-
   const orgName = useMemo(() => {
     if (vaultType !== 'org') return null;
-    
-    if (user?.org?.name) {
-      return user.org.name;
-    }
-    
+    if (user?.org?.name) return user.org.name;
     if (user?.member) {
       const members = Array.isArray(user.member) ? user.member : [user.member];
       const member = members.find((m: MemberWithOrg) => m.org_id === currentOrgId);
       if (member?.org?.name) return member.org.name;
     }
-    
     return "Organization";
   }, [user, vaultType, currentOrgId]);
 
-
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-[500px]">
+      <div className="flex items-center justify-center min-h-100 w-full bg-white rounded-2xl shadow-sm border border-gray-200">
         <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-blue-400" />
-          <p className="text-gray-400 text-base">Loading user data...</p>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600 text-sm font-medium">Loading user data...</p>
         </div>
       </div>
     );
   }
 
-
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-700/50">
-        {showVaultSelector ? (
-          <Select value={vaultType} onValueChange={handleVaultTypeChange}>
-            <SelectTrigger className="w-full sm:w-[320px] bg-gray-800/50 border-0 text-white hover:bg-gray-800 transition-colors py-6 px-4">
-              <SelectValue>
-                <div className="flex items-center gap-3 py-2">
-                  {vaultType === "personal" ? (
-                    <>
-                      <div className="p-2 bg-purple-500/20 rounded-lg">
-                        <UserIcon className="w-5 h-5 text-purple-400" />
-                      </div>
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium text-white">Personal Vault</span>
-                        <span className="text-xs text-gray-400">Your private items</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="p-2 bg-blue-500/20 rounded-lg">
-                        <Building className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium text-white">Organization Vault</span>
-                        {userRole ? (
-                          <span className="text-xs text-gray-400 capitalize">
-                            Role: {userRole}
+    <div className="mx-auto space-y-6 pb-10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      
+      {/* 1. Header Card - New Pattern */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          
+          {/* Title Section */}
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 shadow-sm shrink-0">
+              <FolderOpen className="w-8 h-8 text-blue-600" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-3xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+                Vault Items
+              </h1>
+              <p className="text-gray-500 text-sm font-medium">
+                Manage your secure credentials, notes, and keys.
+              </p>
+            </div>
+          </div>
+
+          {/* Actions Section */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            {/* Context Switcher */}
+            {showVaultSelector ? (
+              <Select value={vaultType} onValueChange={handleVaultTypeChange}>
+                <SelectTrigger className="w-full sm:w-65 h-14 py-7 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all focus:ring-2 focus:ring-blue-100/50 [&>span]:w-full text-left group">
+                  <div className="flex items-center gap-3 w-full">
+                    <div
+                      className={`flex items-center justify-center w-10 h-10 rounded-lg border shadow-sm transition-colors ${
+                        vaultType === "personal"
+                          ? "bg-purple-50 border-purple-100 text-purple-600 group-hover:bg-purple-100"
+                          : "bg-blue-50 border-blue-100 text-blue-600 group-hover:bg-blue-100"
+                      }`}
+                    >
+                      {vaultType === "personal" ? (
+                        <UserIcon className="w-5 h-5" />
+                      ) : (
+                        <Building className="w-5 h-5" />
+                      )}
+                    </div>
+
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-bold text-sm text-gray-900 leading-none mb-1 truncate">
+                        {vaultType === "personal" ? "Personal Vault" : "Organization Vault"}
+                      </span>
+                      <span className="text-[11px] font-medium text-gray-500 truncate group-hover:text-gray-700 transition-colors">
+                        {vaultType === "personal"
+                          ? "Private • Owner"
+                          : userRole
+                          ? `Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`
+                          : "Shared Access"}
+                      </span>
+                    </div>
+                  </div>
+                </SelectTrigger>
+
+                <SelectContent
+                  className="w-65 p-1.5 bg-white border border-gray-200 shadow-xl rounded-xl"
+                  align="start"
+                  sideOffset={4}
+                >
+                  <div className="px-2 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Switch Context
+                  </div>
+
+                  {showPersonalVault && (
+                    <SelectItem
+                      value="personal"
+                      className="rounded-lg py-2.5 px-2 cursor-pointer focus:bg-purple-50 focus:text-purple-900 mb-1 group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-gray-50 border border-gray-200 rounded-md text-gray-500 group-focus:bg-purple-100 group-focus:border-purple-200 group-focus:text-purple-600 transition-colors">
+                          <UserIcon className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-sm">Personal Vault</span>
+                          <span className="text-[10px] text-gray-500 group-focus:text-purple-600/80">
+                            Private Items
                           </span>
-                        ) : (
-                          <span className="text-xs text-gray-400">Shared with team</span>
-                        )}
+                        </div>
                       </div>
-                    </>
+                    </SelectItem>
                   )}
+
+                  {hasOrgAccess && (
+                    <SelectItem
+                      value="org"
+                      className="rounded-lg py-2.5 px-2 cursor-pointer focus:bg-blue-50 focus:text-blue-900 group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-gray-50 border border-gray-200 rounded-md text-gray-500 group-focus:bg-blue-100 group-focus:border-blue-200 group-focus:text-blue-600 transition-colors">
+                          <Building className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-sm">Organization Vault</span>
+                          <span className="text-[10px] text-gray-500 group-focus:text-blue-600/80">
+                            Team Items
+                          </span>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="h-14 px-2 pr-4 flex items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm min-w-50">
+                <div className="flex items-center justify-center w-10 h-10 bg-blue-50 border border-blue-100 text-blue-600 rounded-lg">
+                  <Building className="w-5 h-5" />
                 </div>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-2 border-gray-700 min-w-[320px]">
-              {showPersonalVault && (
-                <SelectItem 
-                  value="personal" 
-                  className="hover:bg-gray-700 cursor-pointer focus:bg-gray-700"
-                >
-                  <div className="flex items-center gap-3 py-3 px-2">
-                    <div className="p-2 bg-purple-500/20 rounded-lg">
-                      <UserIcon className="w-5 h-5 text-purple-400" />
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium text-white">Personal Vault</span>
-                      <span className="text-xs text-gray-400">Your private items</span>
-                    </div>
-                  </div>
-                </SelectItem>
-              )}
-              {hasOrgAccess && (
-                <SelectItem 
-                  value="org" 
-                  className="hover:bg-gray-700 cursor-pointer focus:bg-gray-700"
-                >
-                  <div className="flex items-center gap-3 py-3 px-2">
-                    <div className="p-2 bg-blue-500/20 rounded-lg">
-                      <Building className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium text-white">Organization Vault</span>
-                      <span className="text-xs text-gray-400">Shared with team</span>
-                    </div>
-                  </div>
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        ) : (
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
-              <Building className="w-6 h-6 text-blue-400" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-semibold text-lg text-white">
-                {orgName} Vault
-              </span>
-              <span className="text-xs text-gray-400 capitalize">
-                {userRole === 'owner' ? 'Administrator Access' : `${userRole} Access`}
-              </span>
-            </div>
+                <div className="flex flex-col">
+                  <span className="font-bold text-sm text-gray-900 leading-none mb-1 truncate max-w-37.5">
+                    {orgName}
+                  </span>
+                  <span className="text-[11px] font-medium text-gray-500">
+                    Active Vault
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Add Button */}
+            <button
+              onClick={handleAddItem}
+              disabled={!canEdit || !vaultId}
+              className={`
+                h-14 px-6 flex items-center justify-center gap-2 rounded-xl font-bold text-sm shadow-sm transition-all
+                ${canEdit && vaultId
+                  ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200 hover:shadow-md hover:-translate-y-0.5"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                }
+              `}
+            >
+              {!vaultId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              <span>New Item</span>
+            </button>
           </div>
-        )}
-
-
-        <button
-          onClick={handleAddItem}
-          disabled={!canEdit || !vaultId}
-          title={
-            !vaultId 
-              ? "Loading vault..." 
-              : !canEdit 
-              ? "You don't have permission to add items" 
-              : "Add a new item"
-          }
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all shadow-lg ${
-            canEdit && vaultId
-              ? "bg-blue-600 hover:bg-blue-700 text-white hover:shadow-blue-500/50 hover:scale-105"
-              : "bg-gray-700/50 text-gray-500 cursor-not-allowed"
-          }`}
-        >
-          {!vaultId ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Plus className="w-5 h-5" />
-          )}
-          <span>Add Item</span>
-        </button>
+        </div>
       </div>
 
-
-      <div className="flex items-center gap-4">
-        <div
-          className={`p-3 rounded-xl ${
-            vaultType === "org"
-              ? "bg-blue-500/20 border border-blue-500/30"
-              : "bg-purple-500/20 border border-purple-500/30"
-          }`}
-        >
-          {vaultType === "org" ? (
-            <Building className="w-7 h-7 text-blue-400" />
-          ) : (
-            <UserIcon className="w-7 h-7 text-purple-400" />
-          )}
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-white">
-            {vaultType === "org" ? "Organization Vault" : "Personal Vault"}
-          </h2>
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-sm text-gray-400">
-              {filteredItems.length} {filteredItems.length === 1 ? "item" : "items"}
-            </p>
-            {items.length !== filteredItems.length && (
-              <span className="text-xs text-gray-500">
-                • Filtered from {items.length}
-              </span>
+      {/* 2. Toolbar & Search Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search items, tags, or urls..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-11 pl-12 pr-10 bg-gray-50 border border-gray-200 hover:border-blue-300 hover:bg-white focus:bg-white rounded-xl text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             )}
           </div>
-        </div>
-      </div>
 
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by name or tags..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:bg-gray-800 transition-all"
-          />
-          {searchTerm && (
+          <div className="flex gap-2">
             <button
-              onClick={() => setSearchTerm("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4 text-gray-400" />
-            </button>
-          )}
-        </div>
-
-
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
-              showFilters
-                ? "bg-blue-600/20 border-2 border-blue-500/50 text-blue-300 shadow-lg shadow-blue-500/20"
-                : "bg-gray-800/50 border-2 border-gray-700 text-gray-300 hover:bg-gray-700/50 hover:border-gray-600"
-            }`}
-          >
-            <Filter className="w-5 h-5" />
-            <span className="hidden sm:inline">Filters</span>
-            {(selectedType !== "all" || selectedTag) && (
-              <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
-                {(selectedType !== "all" ? 1 : 0) + (selectedTag ? 1 : 0)}
-              </span>
-            )}
-          </button>
-
-
-          <div className="flex bg-gray-800/50 border-2 border-gray-700 rounded-xl overflow-hidden">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`px-4 py-3 transition-all ${
-                viewMode === "grid"
-                  ? "bg-blue-600/30 text-blue-300 shadow-inner"
-                  : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/30"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 h-11 rounded-xl text-sm font-medium transition-all border shadow-sm ${
+                showFilters
+                  ? "bg-blue-50 border-blue-200 text-blue-700 ring-2 ring-blue-100"
+                  : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
               }`}
             >
-              <Grid className="w-5 h-5" />
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">Filters</span>
+              {(selectedType !== "all" || selectedTag) && (
+                <span className="flex items-center justify-center min-w-5 h-5 px-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-full ml-1">
+                  {(selectedType !== "all" ? 1 : 0) + (selectedTag ? 1 : 0)}
+                </span>
+              )}
             </button>
-            <div className="w-px bg-gray-700"></div>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`px-4 py-3 transition-all ${
-                viewMode === "list"
-                  ? "bg-blue-600/30 text-blue-300 shadow-inner"
-                  : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/30"
-              }`}
-            >
-              <List className="w-5 h-5" />
-            </button>
+
+            <div className="flex p-1 bg-gray-100 border border-gray-200 rounded-xl h-11 items-center">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 h-full aspect-square flex items-center justify-center rounded-lg transition-all ${
+                  viewMode === "grid"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 h-full aspect-square flex items-center justify-center rounded-lg transition-all ${
+                  viewMode === "list"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
+        {/* Expandable Filter Panel */}
+        {showFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                Filter by Type
+              </h3>
+              <button
+                onClick={() => {
+                  setSelectedType("all");
+                  setSelectedTag(null);
+                }}
+                className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+              >
+                Reset filters
+              </button>
+            </div>
 
-      {showFilters && (
-        <div className="bg-gray-800/30 backdrop-blur-sm border-2 border-gray-700/50 rounded-xl p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filter Options
-            </h3>
-            <button
-              onClick={() => {
-                setSelectedType("all");
-                setSelectedTag(null);
-              }}
-              className="text-sm text-gray-400 hover:text-white px-3 py-1.5 hover:bg-gray-700/50 rounded-lg transition-colors"
-            >
-              Clear all
-            </button>
-          </div>
-
-
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                Item Type
-              </label>
+            <div className="flex flex-col gap-4">
               <div className="flex flex-wrap gap-2">
                 {(["all", "login", "note", "totp"] as const).map((type) => (
                   <button
                     key={type}
                     onClick={() => setSelectedType(type === "all" ? "all" : type)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                       selectedType === type
                         ? type === "all"
-                          ? "bg-gray-700 border-2 border-gray-600 text-white shadow-lg scale-105"
-                          : `${getTypeColor(type)} border-2 shadow-lg scale-105`
-                        : "bg-gray-700/30 border-2 border-transparent text-gray-400 hover:bg-gray-700/50 hover:text-gray-300"
+                          ? "bg-gray-900 border-gray-900 text-white shadow-sm"
+                          : `${getTypeColor(type)} shadow-sm ring-1 ring-inset ring-black/5`
+                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
                     }`}
                   >
                     {type.charAt(0).toUpperCase() + type.slice(1)}
                   </button>
                 ))}
               </div>
-            </div>
 
-
-            {availableTags.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Tags ({availableTags.length})
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {availableTags.map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() =>
-                        setSelectedTag(tag === selectedTag ? null : tag)
-                      }
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        selectedTag === tag
-                          ? "bg-blue-600/30 border-2 border-blue-500/50 text-blue-300 shadow-lg scale-105"
-                          : "bg-gray-700/30 border-2 border-transparent text-gray-400 hover:bg-gray-700/50 hover:text-gray-300"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-
-      {error && !isFetching && (
-        <div className="bg-red-900/20 border-2 border-red-700/50 rounded-xl p-5 flex items-start gap-4 shadow-lg">
-          <div className="p-2 bg-red-500/20 rounded-lg flex-shrink-0">
-            <AlertCircle className="w-6 h-6 text-red-400" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-red-300 font-semibold mb-1">
-              Error Loading Items
-            </h3>
-            <p className="text-red-200/80 text-sm">{error}</p>
-          </div>
-        </div>
-      )}
-
-
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-400" />
-            <p className="text-gray-400 text-lg">Loading vault items...</p>
-            <p className="text-gray-500 text-sm mt-1">Please wait</p>
-          </div>
-        </div>
-      ) : filteredItems.length === 0 && !error ? (
-        <div className="text-center py-16 bg-gray-800/20 rounded-xl border-2 border-dashed border-gray-700/50">
-          <div className="p-4 bg-gray-700/30 w-fit mx-auto rounded-full mb-4">
-            <Lock className="w-12 h-12 text-gray-500" />
-          </div>
-          <p className="text-gray-400 text-lg font-medium mb-2">
-            {items.length === 0
-              ? "No items in this vault"
-              : "No items match your filters"}
-          </p>
-          <p className="text-gray-500 text-sm mb-6">
-            {items.length === 0
-              ? "Add your first item to get started"
-              : "Try adjusting your search or filters"}
-          </p>
-          {items.length === 0 && canEdit && (
-            <button
-              onClick={handleAddItem}
-              disabled={!vaultId}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-all hover:scale-105 shadow-lg hover:shadow-blue-500/50 disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-            >
-              <Plus className="w-5 h-5 inline mr-2" />
-              Add your first item
-            </button>
-          )}
-        </div>
-      ) : (
-        <div
-          className={
-            viewMode === "grid"
-              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
-              : "space-y-4"
-          }
-        >
-          {filteredItems.map((item) => {
-            const itemTags = item.tags || [];
-            return (
-              <div
-                key={item.id}
-                onClick={() => handleItemClick(item)}
-                className={`bg-gray-800/40 backdrop-blur-sm border-2 border-gray-700/50 rounded-xl p-5 hover:bg-gray-700/40 hover:border-gray-600 hover:shadow-xl transition-all cursor-pointer group ${
-                  viewMode === "list" ? "flex items-center gap-4" : ""
-                }`}
-              >
-                <div className={`flex items-start ${viewMode === "list" ? "gap-4 flex-1" : "justify-between mb-4"}`}>
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="p-2.5 bg-gray-700/50 rounded-xl group-hover:bg-gray-600/50 group-hover:scale-110 transition-all flex-shrink-0">
-                      {getItemIcon(item.type as ItemType[])}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-semibold truncate mb-1 group-hover:text-blue-300 transition-colors">
-                        {item.name}
-                      </h3>
-                      <p className="text-xs text-gray-400 truncate flex items-center gap-1">
-                        {item.url ? (
-                          <>
-                            <Globe className="w-3 h-3 flex-shrink-0" />
-                            {item.url}
-                          </>
-                        ) : (
-                          "No URL"
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-
-                <div className={`flex flex-wrap gap-2 ${viewMode === "list" ? "" : "mb-3"}`}>
-                  {item.type.map((type, index) => (
-                    <span
-                      key={index}
-                      className={`px-2.5 py-1 text-xs font-medium rounded-lg ${getTypeColor(
-                        type
-                      )} border`}
-                    >
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </span>
-                  ))}
-                </div>
-
-
-                {itemTags.length > 0 && (
-                  <div className={`flex flex-wrap gap-2 ${viewMode === "list" ? "" : "mb-3"}`}>
-                    {itemTags.slice(0, 3).map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-700/40 text-gray-300 border border-gray-600/30"
+              {availableTags.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                          selectedTag === tag
+                            ? "bg-blue-600 border-blue-600 text-white shadow-md"
+                            : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
                       >
                         #{tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Main Content Grid/List */}
+      <div className="min-h-100">
+        {error && !isFetching && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-4 mb-6 shadow-sm">
+            <div className="bg-red-100 p-2 rounded-full">
+               <AlertCircle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-red-900 font-bold text-sm">Unable to load items</h3>
+              <p className="text-red-700 text-xs mt-0.5">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-2xl border border-gray-200 shadow-sm border-dashed">
+            <div className="relative">
+              <div className="w-10 h-10 border-4 border-blue-100 rounded-full animate-spin border-t-blue-600"></div>
+            </div>
+            <p className="text-gray-900 font-semibold mt-4">Syncing vault...</p>
+          </div>
+        ) : filteredItems.length === 0 && !error ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center rounded-2xl border-2 border-dashed border-gray-200 bg-white shadow-sm">
+            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4 relative group">
+              <Lock className="w-8 h-8 text-gray-300 group-hover:text-blue-400 transition-colors" />
+            </div>
+            <h3 className="text-gray-900 font-bold text-lg mb-1">
+              {items.length === 0 ? "Vault is Empty" : "No Matches Found"}
+            </h3>
+            <p className="text-gray-500 text-sm max-w-xs mb-6">
+              {items.length === 0
+                ? "Secure your first item now."
+                : "Try adjusting filters or search terms."}
+            </p>
+            
+            {items.length === 0 && canEdit && (
+              <button
+                onClick={handleAddItem}
+                disabled={!vaultId}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-md transition-all flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Item
+              </button>
+            )}
+          </div>
+        ) : (
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+                : "flex flex-col gap-3"
+            }
+          >
+            {filteredItems.map((item) => {
+              const itemTags = item.tags || [];
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => handleItemClick(item)}
+                  className={`group bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer relative ${
+                    viewMode === "list" ? "flex items-center gap-6 py-4" : "flex flex-col h-full"
+                  }`}
+                >
+                  <div className={`flex items-start ${viewMode === "list" ? "gap-4 flex-1" : "justify-between mb-4"}`}>
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 group-hover:bg-blue-50 group-hover:border-blue-100 transition-all shrink-0">
+                        {getItemIcon(item.type as ItemType[])}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-gray-900 font-bold truncate text-base mb-0.5 group-hover:text-blue-600 transition-colors">
+                          {item.name}
+                        </h3>
+                        <p className="text-xs text-gray-500 truncate flex items-center gap-1.5 font-medium">
+                          {item.url ? (
+                            <>
+                              <Globe className="w-3 h-3 shrink-0 text-gray-400" />
+                              <span className="truncate hover:text-gray-700">{item.url}</span>
+                            </>
+                          ) : (
+                            <span className="text-gray-400 italic">No URL linked</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`flex flex-wrap gap-2 ${viewMode === "list" ? "" : "mb-4 mt-auto"}`}>
+                    {item.type.map((type, index) => (
+                      <span
+                        key={index}
+                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md border ${getTypeColor(type)}`}
+                      >
+                        {type}
                       </span>
                     ))}
-                    {itemTags.length > 3 && (
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-700/40 text-gray-400 border border-gray-600/30">
-                        +{itemTags.length - 3} more
-                      </span>
-                    )}
                   </div>
-                )}
 
+                  {itemTags.length > 0 && (
+                    <div className={`flex flex-wrap gap-1.5 ${viewMode === "list" ? "hidden sm:flex" : "mb-5"}`}>
+                      {itemTags.slice(0, 3).map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 text-[10px] font-medium rounded-md bg-gray-50 text-gray-600 border border-gray-200"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                      {itemTags.length > 3 && (
+                        <span className="px-2 py-1 text-[10px] font-medium rounded-md bg-gray-50 text-gray-400 border border-gray-200">
+                          +{itemTags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
-                <div className="text-xs text-gray-500 flex items-center gap-1 pt-2 border-t border-gray-700/50">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Updated {new Date(item.updated_at).toLocaleDateString()}
+                  <div className={`text-[10px] font-medium text-gray-400 flex items-center gap-2 ${viewMode === "list" ? "hidden md:flex ml-auto" : "pt-4 border-t border-gray-50 w-full"}`}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-blue-400 transition-colors"></div>
+                    Edited {new Date(item.updated_at).toLocaleDateString()}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-
+      {/* Modals */}
       {vaultId && (
         <AddingItemsModal
           isOpen={showAddModal}
@@ -884,7 +712,7 @@ export const UnifiedVaultList: React.FC = () => {
         />
       )}
 
-
+      {/* UPDATED: Pass userRole here! */}
       <ViewItemModal
         isOpen={showViewModal}
         onClose={() => {
@@ -895,13 +723,14 @@ export const UnifiedVaultList: React.FC = () => {
         canEdit={canEdit}
         vaultType={vaultType}
         orgId={vaultType === "org" ? currentOrgId : null}
-        // @ts-expect-error TODO fix this any type
+        // @ts-expect-error userRole prop added now
+        userRole={userRole} 
         onDelete={() => {
-          toast.success("Item deleted (API not implemented yet)");
+          toast.success("Item deleted");
           fetchItems();
         }}
         onEdit={() => {
-          toast.info("Edit feature coming soon");
+          // handled inside ViewItemModal now via its own Edit dialog
         }}
       />
     </div>

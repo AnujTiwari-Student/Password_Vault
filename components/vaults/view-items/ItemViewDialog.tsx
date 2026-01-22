@@ -74,33 +74,43 @@ export const ItemViewDialog: React.FC<ItemViewDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto scrollbar-hide bg-gray-800 border-gray-700 text-white">
-        <ItemHeader item={item} />
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-white border border-gray-200 text-gray-900 shadow-2xl rounded-2xl p-0 gap-0">
         
-        <ItemContent
-          item={item}
-          showPassword={showPassword}
-          showTotp={showTotp}
-          masterPassphrase={masterPassphrase}
-          decryptedData={decryptedData}
-          isCurrentlyDecrypting={isCurrentlyDecrypting}
-          isPending={isPending}
-          onTogglePassword={onTogglePassword}
-          onToggleTotp={onToggleTotp}
-          onCopySensitive={onCopySensitive}
-          onViewSensitive={onViewSensitive}
-          onUnlockItem={onUnlockItem}
-        />
-
-        {canEdit && (
-          <ItemActions
-            isDeleting={finalIsDeleting}
-            isEditing={finalIsEditing}
-            isPending={isPending}
+        {/* Header Section */}
+        <div className="px-6 py-6 border-b border-gray-100 sticky top-0 bg-white z-10">
+          <ItemHeader item={item} />
+        </div>
+        
+        {/* Content Section */}
+        <div className="px-6 py-2">
+          <ItemContent
+            item={item}
+            showPassword={showPassword}
+            showTotp={showTotp}
+            masterPassphrase={masterPassphrase}
+            decryptedData={decryptedData}
             isCurrentlyDecrypting={isCurrentlyDecrypting}
-            onDelete={handleDelete}
-            onEdit={onEdit}
+            isPending={isPending}
+            onTogglePassword={onTogglePassword}
+            onToggleTotp={onToggleTotp}
+            onCopySensitive={onCopySensitive}
+            onViewSensitive={onViewSensitive}
+            onUnlockItem={onUnlockItem}
           />
+        </div>
+
+        {/* Footer Actions */}
+        {canEdit && (
+          <div className="px-6 pb-6 pt-2 bg-white sticky bottom-0 z-10 border-t border-gray-50 mt-2">
+            <ItemActions
+              isDeleting={finalIsDeleting}
+              isEditing={finalIsEditing}
+              isPending={isPending}
+              isCurrentlyDecrypting={isCurrentlyDecrypting}
+              onDelete={handleDelete}
+              onEdit={onEdit}
+            />
+          </div>
         )}
       </DialogContent>
     </Dialog>

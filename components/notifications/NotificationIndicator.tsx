@@ -27,6 +27,6 @@ export const NotificationIndicator: React.FC = () => {
   }
 
   return (
-    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900 animate-pulse"></span>
+    <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm animate-pulse"></span>
   );
 };

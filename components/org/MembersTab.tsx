@@ -49,43 +49,59 @@ export const MembersTab: React.FC<MembersTabProps> = ({
     return matchesSearch && matchesRole;
   });
 
-  console.log("Rendering MembersTab with selectedMembers:", selectAllMembers);
+  // Keep for debugging/logic preservation
+  console.log(selectAllMembers);
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+    <div className="space-y-6">
+      {/* Search and Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 w-full items-stretch sm:items-center">
+        {/* Search Input - Flex Grow */}
+        <div className="relative flex-grow group">
+          <div className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors pointer-events-none z-10">
+            <Search className="w-4 h-4" />
+          </div>
           <Input
-            placeholder="Search members..."
+            placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-gray-750 border-gray-700 focus:border-blue-500 text-white"
+            className="h-11 w-full pl-10 bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all shadow-sm hover:border-gray-300"
           />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-full sm:w-48 bg-gray-750 border-gray-700 focus:border-blue-500 text-white">
-            <Filter className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Filter by role" />
-          </SelectTrigger>
-          <SelectContent className="bg-gray-800 border-gray-700">
-            <SelectItem value="all" className="text-white hover:bg-gray-700">
-              All Roles
-            </SelectItem>
-            <SelectItem value="owner" className="text-white hover:bg-gray-700">
-              Owner
-            </SelectItem>
-            <SelectItem value="admin" className="text-white hover:bg-gray-700">
-              Admin
-            </SelectItem>
-            <SelectItem value="member" className="text-white hover:bg-gray-700">
-              Member
-            </SelectItem>
-            <SelectItem value="viewer" className="text-white hover:bg-gray-700">
-              Viewer
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        
+        {/* Filter Dropdown - Fixed Width */}
+        <div className="w-full sm:w-[160px] flex-shrink-0">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="h-11 w-full bg-white border-gray-200 text-gray-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 rounded-xl shadow-sm hover:bg-gray-50/50 hover:border-gray-300 transition-all px-3.5">
+              <div className="flex items-center gap-2 w-full">
+                <Filter className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <span className="font-medium text-sm truncate flex-1 text-left">
+                  <SelectValue placeholder="All Roles" />
+                </span>
+              </div>
+            </SelectTrigger>
+            <SelectContent 
+              align="end"
+              className="bg-white border-gray-200 shadow-xl rounded-xl w-[160px]"
+            >
+              <SelectItem value="all" className="text-gray-700 hover:bg-gray-50 cursor-pointer py-2.5 px-3 rounded-lg focus:bg-gray-50 font-medium text-sm">
+                All Roles
+              </SelectItem>
+              <SelectItem value="owner" className="text-gray-700 hover:bg-amber-50 cursor-pointer py-2.5 px-3 rounded-lg focus:bg-amber-50 text-sm">
+                Owner
+              </SelectItem>
+              <SelectItem value="admin" className="text-gray-700 hover:bg-indigo-50 cursor-pointer py-2.5 px-3 rounded-lg focus:bg-indigo-50 text-sm">
+                Admin
+              </SelectItem>
+              <SelectItem value="member" className="text-gray-700 hover:bg-emerald-50 cursor-pointer py-2.5 px-3 rounded-lg focus:bg-emerald-50 text-sm">
+                Member
+              </SelectItem>
+              <SelectItem value="viewer" className="text-gray-700 hover:bg-slate-50 cursor-pointer py-2.5 px-3 rounded-lg focus:bg-slate-50 text-sm">
+                Viewer
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <MembersList

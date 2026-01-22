@@ -240,16 +240,16 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700 text-white p-0">
-        <DialogHeader className="p-6 border-b border-gray-700">
-          <DialogTitle className="text-2xl font-bold">
+      <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white border-gray-200 text-gray-900 p-0">
+        <DialogHeader className="p-6 border-b border-gray-200 bg-gray-50">
+          <DialogTitle className="text-2xl font-bold text-gray-900">
             {step === "alert" && "Change Master Passphrase"}
             {step === "otp" && "Verify Identity"}
             {step === "verify_old" && "Verify Old Master Key"}
             {step === "newkey" && "New Master Key Generated"}
             {step === "processing" && "Processing..."}
           </DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className="text-gray-600">
             {step === "alert" && "This will generate a completely new Master Key. Your private key will be re-encrypted."}
             {step === "otp" && "Enter the 6-digit code sent to your email to continue."}
             {step === "verify_old" && "Enter your current master passphrase to decrypt your private key."}
@@ -261,25 +261,27 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
         <div className="p-6 space-y-6">
           {step === "alert" && (
             <div className="text-center py-8">
-              <AlertCircle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-              <p className="text-gray-300 text-lg font-semibold mb-2">
+              <div className="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-orange-200">
+                <AlertCircle className="w-10 h-10 text-orange-600" />
+              </div>
+              <p className="text-gray-900 text-lg font-bold mb-2">
                 ⚠️ Warning: Secure Process
               </p>
-              <p className="text-gray-400 text-sm max-w-md mx-auto">
+              <p className="text-gray-600 text-sm max-w-md mx-auto">
                 We will verify your identity, then re-encrypt your private key with the new master passphrase. Your vault data remains secure throughout this process.
               </p>
               <div className="flex gap-3 mt-6 justify-center">
                 <Button 
                   variant="outline" 
                   onClick={handleClose}
-                  className="border-gray-600 hover:bg-gray-800 hover:text-white bg-red-600 rounded-md"
+                  className="border-gray-300 hover:bg-gray-100 hover:text-gray-900 bg-white rounded-lg font-semibold"
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleSendOtp}
                   disabled={isVerifyingOtp}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
                 >
                   {isVerifyingOtp ? (
                     <>
@@ -297,19 +299,21 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
           {step === "otp" && (
             <div className="max-w-md mx-auto">
               <div className="text-center mb-6">
-                <Shield className="w-12 h-12 text-blue-400 mx-auto mb-4" />
-                <p className="text-gray-300 text-sm">Check your email for verification code</p>
+                <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-blue-200">
+                  <Shield className="w-10 h-10 text-blue-600" />
+                </div>
+                <p className="text-gray-700 text-sm font-medium">Check your email for verification code</p>
               </div>
               
               {otpError && (
-                <div className="bg-red-900/20 border border-red-700/30 rounded-lg p-3 mb-4">
-                  <p className="text-red-300 text-sm">{otpError}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <p className="text-red-800 text-sm font-semibold">{otpError}</p>
                 </div>
               )}
               
               <div className="space-y-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-300 mb-2 block">
+                  <Label className="text-sm font-bold text-gray-900 mb-2 block">
                     Enter 6-digit OTP
                   </Label>
                   <Input
@@ -317,14 +321,14 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
                     maxLength={6}
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="bg-gray-800 border-gray-600 text-white focus:border-blue-500 text-lg text-center tracking-widest h-14 font-mono"
+                    className="bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-lg text-center tracking-widest h-14 font-mono"
                     placeholder="000000"
                   />
                 </div>
                 <Button
                   onClick={handleVerifyOtp}
                   disabled={!otp || otp.length !== 6 || isVerifyingOtp}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
                 >
                   {isVerifyingOtp ? (
                     <>
@@ -342,32 +346,34 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
           {step === "verify_old" && (
             <div className="max-w-md mx-auto">
               <div className="text-center mb-6">
-                <KeyRound className="w-12 h-12 text-blue-400 mx-auto mb-4" />
-                <p className="text-gray-300 text-sm">Enter your current master passphrase</p>
+                <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-blue-200">
+                  <KeyRound className="w-10 h-10 text-blue-600" />
+                </div>
+                <p className="text-gray-700 text-sm font-medium">Enter your current master passphrase</p>
               </div>
               
               {oldMnemonicError && (
-                <div className="bg-red-900/20 border border-red-700/30 rounded-lg p-3 mb-4">
-                  <p className="text-red-300 text-sm">{oldMnemonicError}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <p className="text-red-800 text-sm font-semibold">{oldMnemonicError}</p>
                 </div>
               )}
               
               <div className="space-y-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-300 mb-2 block">
+                  <Label className="text-sm font-bold text-gray-900 mb-2 block">
                     Current Master Passphrase (24 words)
                   </Label>
                   <textarea
                     value={oldMnemonic}
                     onChange={(e) => setOldMnemonic(e.target.value)}
-                    className="w-full bg-gray-800 border-gray-600 text-white focus:border-blue-500 rounded-lg p-3 font-mono text-sm min-h-[120px] resize-none"
+                    className="w-full bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg p-4 font-mono text-sm min-h-[120px] resize-none"
                     placeholder="Enter your 24-word master passphrase..."
                   />
                 </div>
                 <Button
                   onClick={handleVerifyOldMnemonic}
                   disabled={!oldMnemonic.trim() || isVerifyingOldMnemonic}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
                 >
                   {isVerifyingOldMnemonic ? (
                     <>
@@ -384,26 +390,26 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
 
           {step === "newkey" && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-r from-amber-500/10 to-red-500/10 border border-amber-500/30 rounded-2xl p-6">
+              <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xl font-bold text-amber-400 flex items-center">
+                  <span className="text-xl font-bold text-orange-700 flex items-center">
                     <KeyRound className="w-6 h-6 mr-2" />
                     New Master Key
                   </span>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setShowKey(!showKey)}
-                      className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
+                      className="p-2 text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-white border border-gray-300"
                       disabled={isProcessing}
                     >
                       {showKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                     <button
                       onClick={handleCopyKey}
-                      className={`px-4 py-2 text-sm font-semibold rounded-lg flex items-center transition-all duration-200 ${
+                      className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center transition-all duration-200 shadow-sm ${
                         isCopied
-                          ? "bg-green-600 text-white shadow-lg"
-                          : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg"
+                          ? "bg-green-600 text-white"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
                       }`}
                       disabled={isProcessing}
                     >
@@ -422,24 +428,24 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
                   </div>
                 </div>
                 <div
-                  className={`font-mono text-sm break-words p-4 bg-gray-950 border border-gray-700 rounded-lg transition-all duration-200 select-all ${
+                  className={`font-mono text-sm break-words p-4 bg-white border-2 border-gray-300 rounded-lg transition-all duration-200 select-all ${
                     showKey
-                      ? "text-gray-200"
+                      ? "text-gray-900"
                       : "text-transparent select-none blur-sm"
                   }`}
                 >
                   {mnemonic || "Generating your secure master key..."}
                 </div>
                 {!showKey && (
-                  <p className="text-xs text-gray-400 mt-2 text-center">
+                  <p className="text-xs text-gray-600 mt-2 text-center font-medium">
                     Click the eye icon to reveal your key
                   </p>
                 )}
               </div>
 
               {!isCopied && (
-                <div className="bg-amber-900/20 border border-amber-700/30 rounded-lg p-3">
-                  <p className="text-amber-300 text-sm flex items-center">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <p className="text-orange-800 text-sm font-semibold flex items-center">
                     <AlertCircle className="w-4 h-4 mr-2" />
                     You must copy your new master key before proceeding
                   </p>
@@ -449,7 +455,7 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
               <Button
                 onClick={handleConfirmNewKey}
                 disabled={!isCopied || isProcessing}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-semibold py-4 rounded-xl shadow-lg"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg"
               >
                 {isProcessing ? (
                   <>
@@ -461,15 +467,15 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
                 )}
               </Button>
 
-              <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-                <p className="text-xs text-gray-400 text-center leading-relaxed">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-900 text-center leading-relaxed font-medium">
                   🔒 Your new master key is generated locally. Store it securely in a password manager or offline location.
                 </p>
               </div>
 
               {status && (
-                <div className="p-4 bg-gray-800 border border-gray-700 rounded-lg">
-                  <p className="text-xs text-gray-300 text-center">{status}</p>
+                <div className="p-4 bg-gray-100 border border-gray-300 rounded-lg">
+                  <p className="text-xs text-gray-700 text-center font-medium">{status}</p>
                 </div>
               )}
             </div>
@@ -477,11 +483,11 @@ export const ChangeMasterPassphraseModal: React.FC<ChangeMasterPassphraseModalPr
 
           {step === "processing" && (
             <div className="text-center py-8">
-              <Loader2 className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-spin" />
-              <p className="text-gray-300 text-lg font-semibold mb-2">
+              <Loader2 className="w-16 h-16 text-blue-600 mx-auto mb-4 animate-spin" />
+              <p className="text-gray-900 text-lg font-bold mb-2">
                 {status || "Processing your request..."}
               </p>
-              <p className="text-gray-400 text-sm max-w-md mx-auto">
+              <p className="text-gray-600 text-sm max-w-md mx-auto">
                 Please do not close this window
               </p>
             </div>

@@ -72,40 +72,20 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
   const fetchMembers = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
-      console.log("=== FETCH MEMBERS START ===");
-      console.log("Fetching members for all user's organizations");
-      console.log("User:", user?.name, "User ID:", user?.id);
-
       const response = await axios.get<APIResponse<MembersResponse>>(
         `/api/members/all-orgs?user_id=${user.id}`
       );
 
-      console.log("API Response success:", response.data.success);
-
       if (response.data.success && response.data.data) {
         const fetchedMembers = response.data.data.members || [];
-        console.log("Total member entries fetched:", fetchedMembers.length);
-        console.log(
-          "Members details:",
-          fetchedMembers.map((m) => ({
-            name: m.user?.name,
-            email: m.user?.email,
-            org_id: m.org_id,
-            org_name: m.org?.name,
-            membership_id: m.id,
-            role: m.role,
-          }))
-        );
-
         setMembers(fetchedMembers);
       }
-      console.log("=== FETCH MEMBERS END ===");
     } catch (error) {
       console.error("Failed to fetch members:", error);
     } finally {
       setLoading(false);
     }
-  }, [user?.id, user?.name]);
+  }, [user?.id]);
 
   const fetchTeams = useCallback(async (): Promise<void> => {
     if (!currentOrgId || !user.vault?.id) return;
@@ -123,10 +103,6 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
   }, [currentOrgId, user.vault?.id]);
 
   useEffect(() => {
-    console.log(
-      "OrganizationManagement effect triggered - currentOrgId:",
-      currentOrgId
-    );
     if (currentOrgId) {
       fetchMembers();
       fetchTeams();
@@ -209,27 +185,27 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
     <div className="space-y-8">
       <OrganizationHeader />
 
-      <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <OrganizationTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <div className="p-6">
           {activeTab === "members" ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {showBulkActions && (
-                <div className="flex items-center justify-between p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
-                  <span className="text-sm text-blue-300">
+                <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-xl animate-in fade-in slide-in-from-top-2">
+                  <span className="text-sm font-semibold text-blue-700">
                     {selectedMembers.size} member(s) selected
                   </span>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <button
                       onClick={clearSelection}
-                      className="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg transition-colors shadow-sm"
                     >
                       Clear
                     </button>
                     <button
                       onClick={handleBulkRemove}
-                      className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors shadow-sm"
                       disabled={isPending}
                     >
                       Remove Selected

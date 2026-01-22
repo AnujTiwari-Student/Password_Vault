@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogContent } from '../ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog'
 import ItemCreationForm from '../auth/item-creation-form'
 
 interface AddingItemsModalProps {
@@ -21,14 +21,15 @@ function AddingItemsModal({
 }: AddingItemsModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='bg-gray-900 border border-gray-700 max-h-[90vh] overflow-hidden flex flex-col'>
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className='text-white'>Add Items</DialogTitle>
-          <DialogDescription className='text-gray-400'>
-            Add items to your {vaultType === 'personal' ? 'personal' : 'organization'} vault
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex-1 overflow-hidden">
+      <DialogContent className='bg-white border-gray-200 shadow-2xl p-0 gap-0 max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col sm:rounded-2xl'>
+        {/* Hidden title for Accessibility (Screen Readers) 
+          We hide this visually because ItemCreationForm has its own visible "FormHeader"
+        */}
+        <DialogTitle className="sr-only">
+          Create New {vaultType} Item
+        </DialogTitle>
+
+        <div className="flex-1 h-full overflow-hidden flex flex-col bg-white px-6 py-6 sm:px-8">
           <ItemCreationForm 
             vaultId={vaultId}
             vaultType={vaultType}

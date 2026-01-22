@@ -5,18 +5,11 @@ import { APIVaultItem, DecryptedItemData } from "@/types/vault";
 export const useItemActions = (
   item: APIVaultItem | null,
   onClose: () => void,
-  vaultId: string,
-  vaultType: "personal" | "org",
-  orgId?: string | null,
-  umkKey?: CryptoKey,
-  ovkKey?: CryptoKey
 ) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
   const toastShownRef = useRef<Set<string>>(new Set());
-
-  console.log('useItemActions - item:', item, 'vaultId:', vaultId, 'vaultType:', vaultType, 'orgId:', orgId, 'umkKey:', umkKey, 'ovkKey:', ovkKey);
 
   const showToastOnce = useCallback((key: string, type: 'success' | 'error', message: string) => {
     if (!toastShownRef.current.has(key)) {

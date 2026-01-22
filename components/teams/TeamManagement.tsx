@@ -1,13 +1,22 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Users, UserPlus, AlertCircle, UserX } from "lucide-react";
+import {
+  Users,
+  UserPlus,
+  AlertCircle,
+  UserX,
+  Shield,
+  Mail,
+  Building,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
 import axios from "axios";
 import { Vault, User } from "@/types/vault";
 import { APIResponse } from "@/types/api-responses";
 import { AddMemberModal } from "./AddMemberModal";
 import Image from "next/image";
-// import { toast } from "sonner";
 import { MemberDetailsModal } from "../organization/MemberDetailsModal";
 
 interface TeamManagementProps {
@@ -65,43 +74,21 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
       setMembersError(null);
       setMembersLoading(true);
 
-      console.log("=== FETCH MEMBERS START (TeamManagement) ===");
-      console.log("Fetching members for all user's organizations");
-      console.log("User:", user?.name, "User ID:", user?.id);
-
       const response = await axios.get<APIResponse<MembersResponse>>(
-        `/api/members/all-orgs?user_id=${user.id}`
+        `/api/members/all-orgs?user_id=${user.id}`,
       );
-
-      console.log("API Response success:", response.data.success);
 
       if (response.data.success && response.data.data) {
         const membersData = response.data.data.members || [];
-        console.log("Total member entries fetched:", membersData.length);
-        console.log(
-          "Members details:",
-          membersData.map((m) => ({
-            name: m.user?.name,
-            email: m.user?.email,
-            org_id: m.org_id,
-            org_name: m.org?.name,
-            membership_id: m.id,
-            role: m.role,
-          }))
-        );
-
         setOrgMembers(membersData);
       } else {
         setMembersError(
           response.data.errors?._form?.[0] ||
-            "Failed to fetch organization members"
+            "Failed to fetch organization members",
         );
         setOrgMembers([]);
       }
-      console.log("=== FETCH MEMBERS END ===");
     } catch (error) {
-      console.error("Failed to fetch organization members:", error);
-
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
           setOrgMembers([]);
@@ -111,7 +98,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
             error.response?.data?.errors?._form?.[0] ||
               error.response?.data?.message ||
               error.message ||
-              "Failed to fetch organization members"
+              "Failed to fetch organization members",
           );
         }
       } else {
@@ -121,7 +108,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
     } finally {
       setMembersLoading(false);
     }
-  }, [user?.id, user?.name]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (hasValidVault && hasValidOrg) {
@@ -141,61 +128,31 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
     fetchOrgMembers();
   };
 
-  // const handleRemoveMember = async (memberId: string, memberName: string, orgName: string) => {
-  //   if (
-  //     !confirm(
-  //       `Are you sure you want to remove ${memberName} from ${orgName}?`
-  //     )
-  //   ) {
-  //     return;
-  //   }
-
-  //   try {
-  //     const member = orgMembers.find(m => m.id === memberId);
-  //     if (!member) {
-  //       toast.error("Member not found");
-  //       return;
-  //     }
-
-  //     const response = await axios.delete<APIResponse>(
-  //       `/api/members?id=${memberId}&org_id=${member.org_id}`
-  //     );
-
-  //     if (response.data.success) {
-  //       toast.success(`Member removed from ${orgName} successfully`);
-  //       fetchOrgMembers();
-  //     } else {
-  //       const errorMsg =
-  //         response.data.errors?._form?.[0] || "Failed to remove member";
-  //       toast.error(errorMsg);
-  //     }
-  //   } catch (error) {
-  //     if (axios.isAxiosError(error)) {
-  //       const errorMsg =
-  //         error.response?.data?.errors?._form?.[0] ||
-  //         error.response?.data?.message ||
-  //         error.message ||
-  //         "Failed to remove member";
-  //       toast.error(errorMsg);
-  //     } else {
-  //       toast.error("An unexpected error occurred");
-  //     }
-  //   }
-  // };
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "owner":
+        return "bg-amber-50 text-amber-700 border-amber-200";
+      case "admin":
+        return "bg-indigo-50 text-indigo-700 border-indigo-200";
+      case "member":
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      default:
+        return "bg-gray-50 text-gray-700 border-gray-200";
+    }
+  };
 
   if (!vault) {
     return (
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-start gap-3">
-          <div className="p-2.5 bg-red-500/10 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-red-400" />
+      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-red-50 rounded-xl border border-red-100">
+            <AlertCircle className="w-6 h-6 text-red-600" />
           </div>
           <div>
-            <p className="text-red-300 font-semibold text-base">
-              Invalid Vault
-            </p>
-            <p className="text-sm mt-1 text-gray-400">
-              Vault information is missing or invalid
+            <h3 className="text-gray-900 font-bold text-base">Invalid Vault</h3>
+            <p className="text-sm mt-1 text-gray-500">
+              Vault information is missing or invalid. Please check your
+              configuration.
             </p>
           </div>
         </div>
@@ -205,17 +162,18 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
 
   if (!user) {
     return (
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-start gap-3">
-          <div className="p-2.5 bg-red-500/10 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-red-400" />
+      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-red-50 rounded-xl border border-red-100">
+            <AlertCircle className="w-6 h-6 text-red-600" />
           </div>
           <div>
-            <p className="text-red-300 font-semibold text-base">
+            <h3 className="text-gray-900 font-bold text-base">
               User Not Found
-            </p>
-            <p className="text-sm mt-1 text-gray-400">
-              User information is missing or invalid
+            </h3>
+            <p className="text-sm mt-1 text-gray-500">
+              User information could not be retrieved. Please try logging in
+              again.
             </p>
           </div>
         </div>
@@ -225,17 +183,17 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
 
   if (!hasValidVault || !isOrgVault) {
     return (
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-start gap-3">
-          <div className="p-2.5 bg-yellow-500/10 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-yellow-400" />
+      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+            <AlertCircle className="w-6 h-6 text-amber-600" />
           </div>
           <div>
-            <p className="text-yellow-300 font-semibold text-base">
-              Not Available
-            </p>
-            <p className="text-sm mt-1 text-gray-400">
-              Member management is only available for organization vaults
+            <h3 className="text-gray-900 font-bold text-base">
+              Feature Not Available
+            </h3>
+            <p className="text-sm mt-1 text-gray-500">
+              Team management is exclusively available for Organization vaults.
             </p>
           </div>
         </div>
@@ -245,17 +203,17 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
 
   if (!hasValidOrg) {
     return (
-      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-start gap-3">
-          <div className="p-2.5 bg-yellow-500/10 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-yellow-400" />
+      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+            <AlertCircle className="w-6 h-6 text-amber-600" />
           </div>
           <div>
-            <p className="text-yellow-300 font-semibold text-base">
+            <h3 className="text-gray-900 font-bold text-base">
               Organization Required
-            </p>
-            <p className="text-sm mt-1 text-gray-400">
-              This vault requires organization membership to manage members.
+            </h3>
+            <p className="text-sm mt-1 text-gray-500">
+              You must be part of an organization to manage team members.
             </p>
           </div>
         </div>
@@ -265,172 +223,168 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
 
   if (membersLoading) {
     return (
-      <div className="bg-gray-800 rounded-xl p-12 border border-gray-700">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-700 rounded w-1/4"></div>
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-700 rounded"></div>
-            <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-          </div>
-        </div>
+      <div className="bg-white rounded-2xl p-12 border border-gray-200 shadow-sm flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+        <p className="text-gray-900 font-medium">Loading team members...</p>
+        <p className="text-gray-500 text-sm mt-1">
+          Fetching organization details
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2.5 bg-blue-500/10 rounded-lg">
-            <Users size={24} className="text-blue-400" />
-          </div>
-          <h2 className="text-2xl font-bold text-white">Members</h2>
-        </div>
-        <p className="text-gray-400 text-sm ml-14">
-          Manage organization members and their access
-        </p>
-      </div>
-
-      <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-700 bg-gray-800/50">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold text-white">
-                Organization Members
-                {!membersLoading && !membersError && (
-                  <span className="text-gray-400 font-normal ml-2">
-                    ({orgMembers.length})
-                  </span>
-                )}
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Members across all your organizations
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white rounded-xl shadow-sm border flex items-center justify-between w-full border-gray-200 p-6 sm:p-8">
+          <div className="gap-4 flex items-center">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Users size={22} className="text-blue-600" />
+            </div>
+            <div className="">
+              <h2 className="text-3xl lg:text-2xl font-bold text-gray-900">
+                Member Management
+              </h2>
+              <p className="text-gray-600 text-sm sm:text-base">
+                Manage your organization&apos;s team members
               </p>
             </div>
-            <button
-              onClick={() => setShowAddMember(true)}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all flex items-center gap-2 text-sm font-medium"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add Member
-            </button>
+          </div>
+          <button
+            onClick={() => setShowAddMember(true)}
+            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Member
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-gray-500" />
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+              Organization Members
+            </h3>
+            <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs font-bold">
+              {orgMembers.length}
+            </span>
           </div>
         </div>
 
         <div className="p-6">
           {membersError ? (
-            <div className="bg-red-900/20 border border-red-700/30 rounded-lg p-5">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-red-500/10 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-red-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-red-300 font-semibold">
-                    Error Loading Members
-                  </p>
-                  <p className="text-sm text-red-400 mt-1">{membersError}</p>
-                </div>
-                <button
-                  onClick={retryFetchMembers}
-                  className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Try Again
-                </button>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex flex-col items-center text-center">
+              <div className="bg-red-100 p-3 rounded-full mb-3">
+                <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
+              <h3 className="text-red-900 font-bold mb-1">
+                Error Loading Members
+              </h3>
+              <p className="text-red-700 text-sm mb-4">{membersError}</p>
+              <button
+                onClick={retryFetchMembers}
+                className="px-4 py-2 bg-white border border-red-200 text-red-700 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors shadow-sm"
+              >
+                Try Again
+              </button>
             </div>
           ) : orgMembers.length === 0 ? (
-            <div className="text-center py-16 bg-gray-750 rounded-lg border border-gray-700">
-              <div className="w-16 h-16 bg-gray-700/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <UserX className="w-8 h-8 text-gray-600" />
+            <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-200">
+              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100 mb-4">
+                <UserX className="w-8 h-8 text-gray-300" />
               </div>
-              <p className="text-base font-semibold text-white mb-2">
-                No members in organization
-              </p>
-              <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto">
-                Start building your team by inviting members to collaborate
+              <h3 className="text-gray-900 font-bold text-lg mb-2">
+                No members yet
+              </h3>
+              <p className="text-gray-500 text-sm mb-6 max-w-sm">
+                Your organization does not have any members yet. Invite your
+                team to start collaborating.
               </p>
               <button
                 onClick={() => setShowAddMember(true)}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all inline-flex items-center gap-2 font-medium"
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-sm hover:shadow-md transition-all flex items-center gap-2"
               >
                 <UserPlus className="w-4 h-4" />
-                Invite Your First Member
+                Invite First Member
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-3">
               {orgMembers.map((member) => {
                 const orgName = member.org?.name || "";
                 return (
                   <div
                     key={member.id}
-                    className="flex items-center justify-between p-4 bg-gray-750 rounded-lg hover:bg-gray-700/70 transition-all border border-gray-700/50 hover:border-gray-600 cursor-pointer"
+                    className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all cursor-pointer relative"
                     onClick={() => {
                       setSelectedMemberForDetails(member);
                       setShowDetailsModal(true);
                     }}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       {member.user?.image ? (
                         <Image
                           src={member.user.image}
                           alt={member.user?.name || "User"}
-                          width={40}
-                          height={40}
-                          className="w-10 h-10 rounded-full"
+                          width={48}
+                          height={48}
+                          className="w-12 h-12 rounded-xl border border-gray-100 object-cover"
                         />
                       ) : (
-                        <div className="w-10 h-10 bg-gray-600/50 rounded-full flex items-center justify-center">
-                          <Users className="w-5 h-5 text-gray-400" />
+                        <div className="w-12 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                          <Users className="w-6 h-6" />
                         </div>
                       )}
+
                       <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-white">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-base font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
                             {member.user?.name || "Unknown User"}
-                          </p>
+                          </h4>
                           {orgName && (
-                            <span className="text-xs font-medium text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wide border border-blue-100">
+                              <Building className="w-3 h-3" />
                               {orgName}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {member.user?.email || "No email"}
-                        </p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500 group-hover:text-gray-600">
+                          <Mail className="w-3.5 h-3.5" />
+                          <span>
+                            {member.user?.email || "No email provided"}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`px-3 py-1.5 text-xs rounded-lg font-semibold ${
-                          member.role === "owner"
-                            ? "bg-yellow-900/30 text-yellow-300 border-yellow-700/30 border"
-                            : member.role === "admin"
-                            ? "bg-blue-900/30 text-blue-300 border-blue-700/30 border"
-                            : member.role === "member"
-                            ? "bg-green-900/30 text-green-300 border-green-700/30 border"
-                            : "bg-gray-700/50 text-gray-400"
-                        }`}
+
+                    <div className="flex items-center justify-between sm:justify-end gap-4 mt-4 sm:mt-0 pl-16 sm:pl-0">
+                      <div
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 ${getRoleColor(member.role)}`}
                       >
+                        <Shield className="w-3.5 h-3.5" />
                         {member.role}
-                      </span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-colors" />
                     </div>
                   </div>
                 );
               })}
-              <MemberDetailsModal
-                isOpen={showDetailsModal}
-                onClose={() => {
-                  setShowDetailsModal(false);
-                  setSelectedMemberForDetails(null);
-                }}
-                // @ts-expect-error passing OrganizationMember
-                member={selectedMemberForDetails}
-              />
             </div>
           )}
         </div>
       </div>
+
+      <MemberDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedMemberForDetails(null);
+        }}
+        // @ts-expect-error passing OrganizationMember
+        member={selectedMemberForDetails}
+      />
 
       <AddMemberModal
         isOpen={showAddMember}

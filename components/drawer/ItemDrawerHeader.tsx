@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, KeyRound, ShieldCheck, FileText, Layers } from 'lucide-react';
 
 interface APIVaultItem {
   id: string;
@@ -20,49 +20,81 @@ interface ItemDrawerHeaderProps {
   onClose: () => void;
 }
 
-const getTypeColor = (types: string[]) => {
-  if (types.length === 1) {
-    switch (types[0]) {
-      case 'login':
-        return 'bg-blue-900/50 text-blue-300 border-blue-700/50';
-      case 'totp':
-        return 'bg-green-900/50 text-green-300 border-green-700/50';
-      case 'note':
-        return 'bg-purple-900/50 text-purple-300 border-purple-700/50';
-      default:
-        return 'bg-gray-900/50 text-gray-300 border-gray-700/50';
-    }
+const getTypeConfig = (types: string[]) => {
+  if (types.length > 1) {
+    return {
+      className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      icon: Layers
+    };
   }
-  return 'bg-gradient-to-r from-blue-900/50 to-green-900/50 text-white border-blue-700/50';
+  
+  switch (types[0]) {
+    case 'login':
+      return {
+        className: 'bg-blue-50 text-blue-700 border-blue-200',
+        icon: KeyRound
+      };
+    case 'totp':
+      return {
+        className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        icon: ShieldCheck
+      };
+    case 'note':
+      return {
+        className: 'bg-purple-50 text-purple-700 border-purple-200',
+        icon: FileText
+      };
+    default:
+      return {
+        className: 'bg-gray-50 text-gray-700 border-gray-200',
+        icon: Layers
+      };
+  }
 };
 
 const getTypeDisplayString = (types: string[]): string => {
-  return types.map(type => type.charAt(0).toUpperCase() + type.slice(1)).join(' + ');
+  if (types.length > 1) return 'Combined Item';
+  return types[0].charAt(0).toUpperCase() + types[0].slice(1);
 };
 
 export const ItemDrawerHeader: React.FC<ItemDrawerHeaderProps> = ({ item, onClose }) => {
+  const config = getTypeConfig(item.type);
+  const Icon = config.icon;
+
   return (
-    <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-700/50 bg-gradient-to-r from-gray-800/80 to-gray-850/80 backdrop-blur-sm">
-      <div className="flex-1 min-w-0 pr-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 truncate">{item.name}</h2>
-        <div className="flex flex-wrap gap-1">
-          {item.type.length === 1 ? (
-            <span className={`inline-block px-2 sm:px-3 py-1 text-xs font-medium rounded-full border ${getTypeColor(item.type)}`}>
-              {getTypeDisplayString(item.type)}
-            </span>
-          ) : (
-            <span className={`inline-block px-2 sm:px-3 py-1 text-xs font-medium rounded-full border ${getTypeColor(item.type)}`}>
-              {getTypeDisplayString(item.type)}
-            </span>
+    <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100 bg-white">
+      <div className="flex-1 min-w-0 pr-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 truncate tracking-tight leading-snug">
+          {item.name}
+        </h2>
+        
+        <div className="flex flex-wrap gap-2">
+          {/* Main Type Badge */}
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-md border uppercase tracking-wide ${config.className}`}>
+            <Icon className="w-3.5 h-3.5" />
+            {getTypeDisplayString(item.type)}
+          </span>
+
+          {/* Individual type tags for combined items */}
+          {item.type.length > 1 && (
+            <div className="flex items-center gap-1">
+              <span className="text-gray-300 text-xs">|</span>
+              {item.type.map((type, idx) => (
+                <span key={idx} className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded capitalize">
+                  {type}
+                </span>
+              ))}
+            </div>
           )}
         </div>
       </div>
+      
       <button
         onClick={onClose}
-        className="p-2 hover:bg-gray-800/80 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 group flex-shrink-0"
+        className="p-2 -mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors shrink-0"
         title="Close"
       >
-        <X className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+        <X className="w-5 h-5" />
       </button>
     </div>
   );

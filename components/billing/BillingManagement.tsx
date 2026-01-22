@@ -48,10 +48,10 @@ export const BillingManagement: React.FC<BillingManagementProps> = ({
   };
 
   return (
-    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-700 bg-gray-800/50">
-        <h3 className="text-lg font-semibold text-white">Billing Management</h3>
-        <p className="text-gray-500 text-xs mt-0.5">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
+        <h3 className="text-lg font-semibold text-gray-900">Billing Management</h3>
+        <p className="text-gray-600 text-sm mt-0.5">
           Manage your subscription and download invoices
         </p>
       </div>
@@ -59,7 +59,7 @@ export const BillingManagement: React.FC<BillingManagementProps> = ({
       <div className="p-6">
         <div className="flex flex-wrap gap-3">
           <button
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 border border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-semibold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleDownloadInvoice}
             disabled={isDownloadingInvoice}
           >
@@ -77,14 +77,14 @@ export const BillingManagement: React.FC<BillingManagementProps> = ({
           </button>
 
           <button
-            className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 border border-purple-600"
+            className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-semibold flex items-center justify-center gap-2 shadow-sm"
             onClick={onManageClick}
           >
             <FileText className="w-4 h-4" />
             View Subscription Details
           </button>
         </div>
-        <p className="text-gray-400 text-xs mt-3">
+        <p className="text-gray-600 text-sm mt-4 leading-relaxed">
           Download your latest invoice or view detailed subscription information including payment history and billing cycle.
         </p>
       </div>

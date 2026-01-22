@@ -12,7 +12,7 @@ import { Textarea } from "../ui/textarea";
 import { FormError } from "./form-error";
 import { FormSuccess } from "./form-success";
 import { useSession } from "next-auth/react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Building2, FileText, KeyRound, Loader2 } from "lucide-react";
 import { 
   generateRandomBytes, 
   bufferToBase64, 
@@ -95,80 +95,101 @@ function CreateOrgForm({ onSuccess, onClose }: CreateOrgFormProps) {
   return (
     <div className='w-full'>
       <Form {...form}>
-        <form className='space-y-4' onSubmit={form.handleSubmit(handleSubmit)}>
-          <div className='space-y-4'>
+        <form className='space-y-5' onSubmit={form.handleSubmit(handleSubmit)}>
+          <div className='space-y-5'>
+            {/* Organization Name */}
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className='text-[#bfbfbf]'>Organization Name</FormLabel>
+                  <FormLabel className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5 ml-1">
+                    <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                    Organization Name
+                  </FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type="text"
-                      placeholder="Enter organization name"
-                      className="text-white"
+                      placeholder="e.g. Acme Corp, Engineering Team"
+                      className="h-11 bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl"
                       disabled={isPending}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-xs font-medium" />
                 </FormItem>
               )}
             />
+
+            {/* Description */}
             <FormField
               control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className='text-[#bfbfbf]'>Description (Optional)</FormLabel>
+                  <FormLabel className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5 ml-1">
+                    <FileText className="w-3.5 h-3.5 text-gray-400" />
+                    Description (Optional)
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
-                      placeholder="Brief description of your organization"
-                      className="text-white resize-none"
+                      placeholder="Brief description of your organization..."
+                      className="min-h-20 bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl resize-none"
                       rows={3}
                       disabled={isPending}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-xs font-medium" />
                 </FormItem>
               )}
             />
+
+            {/* Master Passphrase */}
             <FormField
               control={form.control}
               name="masterPassphrase"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className='text-[#bfbfbf]'>Master Passphrase</FormLabel>
+                  <FormLabel className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5 ml-1">
+                    <KeyRound className="w-3.5 h-3.5 text-gray-400" />
+                    Master Passphrase
+                  </FormLabel>
                   <FormControl>
-                    <div className="relative">
+                    <div className="relative group">
                       <Input
                         {...field}
                         type={showPassphrase ? 'text' : 'password'}
-                        placeholder="Enter your master passphrase"
-                        className="text-white pr-10"
+                        placeholder="Enter your master passphrase to encrypt the org vault"
+                        className="h-11 pr-12 bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl"
                         disabled={isPending}
                       />
-                      <div
+                      <button
+                        type="button"
                         onClick={() => setShowPassphrase(!showPassphrase)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-[#bfbfbf] hover:text-white"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        disabled={isPending}
                       >
-                        {showPassphrase ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </div>
+                        {showPassphrase ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
                     </div>
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-xs font-medium" />
                 </FormItem>
               )}
             />
           </div>
-          <FormError message={error} />
-          <FormSuccess message={success} />
-          <div className="flex gap-3 pt-2">
+
+          <div className="pt-2 space-y-3">
+            <FormError message={error} />
+            <FormSuccess message={success} />
+          </div>
+
+          <div className="flex gap-3 pt-2 border-t border-gray-100 mt-4">
             <Button
               type="button"
-              className="flex-1 bg-blue-500 hover:bg-gray-600 hover:text-white"
+              variant="outline"
+              className="flex-1 bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 h-11 rounded-xl transition-all font-medium"
               onClick={onClose}
               disabled={isPending}
             >
@@ -176,10 +197,17 @@ function CreateOrgForm({ onSuccess, onClose }: CreateOrgFormProps) {
             </Button>
             <Button
               type="submit"
-              className={`flex-1 bg-blue-500 hover:bg-gray-600 hover:text-white`}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-11 rounded-xl shadow-sm hover:shadow-md transition-all font-medium disabled:opacity-70"
               disabled={isPending}
             >
-              {isPending ? 'Creating...' : 'Create Organization'}
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Organization'
+              )}
             </Button>
           </div>
         </form>

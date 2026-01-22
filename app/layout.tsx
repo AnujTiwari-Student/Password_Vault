@@ -34,13 +34,17 @@ export default async function RootLayout({
   return (
     <html lang="en" className="hydrated">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900`}
       >
         <SessionProvider session={session}>
           <MnemonicProvider>
             <VaultProvider>
-              <SidebarProvider className="bg-gray-900">
-                <main className="w-max flex-1">{children}</main>
+              {/* Removed bg-gray-900, let it inherit the light theme or transparent */}
+              <SidebarProvider>
+                {/* Changed w-max to w-full for proper full-width responsive behavior */}
+                <main className="w-full flex-1 flex flex-col min-h-screen">
+                  {children}
+                </main>
                 <Script src="https://checkout.razorpay.com/v1/checkout.js" />
                 <Toaster />
               </SidebarProvider>

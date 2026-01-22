@@ -1,17 +1,18 @@
 "use client";
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { APIVaultItem } from "@/types/vault";
-import { MasterPassphraseModal } from "./PassphraseModal";
+import { APIVaultItem, MemberRole } from "@/types/vault";
 import { useUserMasterKey } from "@/hooks/useUserMasterKey";
 import { useVaultOVK } from "@/hooks/useVaultOvk";
 import { useDecryption } from "@/hooks/useDecryption";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import {
-  DeleteConfirmDialog,
-  EditItemDialog,
-  ItemViewDialog,
-} from "../vaults/view-items";
+import { 
+  DeleteConfirmDialog, 
+  EditItemDialog 
+} from "../vaults/view-items"; 
+import { EnhancedItemDrawer } from "../drawer/EnhancedItemDrawer";
+import { MasterPassphraseModal } from "./PassphraseModal";
 
 interface ViewItemModalProps {
   isOpen: boolean;
@@ -20,6 +21,8 @@ interface ViewItemModalProps {
   canEdit: boolean;
   vaultType: "personal" | "org";
   orgId?: string | null;
+  userRole?: MemberRole; // Added userRole prop
+  onDelete?: () => void; // Parent callback to refresh list after delete
 }
 
 export const ViewItemModal: React.FC<ViewItemModalProps> = ({
@@ -29,17 +32,19 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
   canEdit,
   vaultType,
   orgId,
+  userRole,
+  onDelete
 }) => {
   const user = useCurrentUser();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showTotp, setShowTotp] = useState(false);
+  
   const [showMasterPassphraseModal, setShowMasterPassphraseModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  
   const [masterPassphrase, setMasterPassphrase] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isPending, setIsPending] = useState(false);
+  const [isPending, setIsPending] = useState(false); 
   const [hasAttemptedDecrypt, setHasAttemptedDecrypt] = useState(false);
 
   const toastShownRef = useRef<Set<string>>(new Set());
@@ -52,6 +57,8 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
 
   const decryptedData = item ? getDecryptedItem(item.id) : null;
   const isCurrentlyDecrypting = item ? isDecrypting(item.id) : false;
+
+  const activeDecryptedData = masterPassphrase ? decryptedData : null;
 
   const showToastOnce = useCallback((key: string, type: 'success' | 'error', message: string) => {
     if (!toastShownRef.current.has(key)) {
@@ -69,6 +76,7 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
 
   useEffect(() => {
     const attemptDecryption = async () => {
+      console.log(isPending)
       if (item && ovkCryptoKey && masterPassphrase && !decryptedData && !isCurrentlyDecrypting && !hasAttemptedDecrypt) {
         setHasAttemptedDecrypt(true);
         try {
@@ -83,11 +91,13 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
     };
 
     attemptDecryption();
+    // eslint-disable-next-line
   }, [item, ovkCryptoKey, masterPassphrase, decryptedData, isCurrentlyDecrypting, hasAttemptedDecrypt, decryptItem, showToastOnce]);
 
   useEffect(() => {
     if (!isOpen) {
       setHasAttemptedDecrypt(false);
+      setMasterPassphrase(null);
     }
   }, [isOpen]);
 
@@ -96,48 +106,26 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
   const handleVerifyPassphrase = async (passphrase: string): Promise<boolean> => {
     setMasterPassphrase(passphrase);
     setHasAttemptedDecrypt(false);
-    return true;
-  };
-
-  const handleViewSensitive = () => {
-    if (!masterPassphrase) {
-      setShowMasterPassphraseModal(true);
-    }
-  };
-
-  const handleCopySensitive = (field: string) => {
-    if (!decryptedData) {
-      setShowMasterPassphraseModal(true);
-      return;
-    }
-
-    const data = decryptedData as unknown as Record<string, string>;
-    const value = data[field] || '';
-    if (value) {
-      navigator.clipboard.writeText(value);
-      showToastOnce(`copy-${field}`, 'success', `${field} copied to clipboard`);
-    }
+    return true; 
   };
 
   const handleModalClose = () => {
-    setShowPassword(false);
-    setShowTotp(false);
     setMasterPassphrase(null);
     setHasAttemptedDecrypt(false);
     toastShownRef.current.clear();
     onClose();
   };
 
-  const handleDeleteClick = () => {
-    setShowDeleteDialog(true);
-  };
-
+  // UNCOMMENTED THIS!
+  const handleDeleteClick = () => setShowDeleteDialog(true);
+  
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
     try {
       const response = await fetch(`/api/items?id=${item.id}`, { method: "DELETE" });
       if (response.ok) {
         showToastOnce('delete-success', 'success', 'Item deleted successfully');
+        onDelete?.(); // Call parent refresh
         onClose();
       } else {
         showToastOnce('delete-error', 'error', 'Failed to delete item');
@@ -148,6 +136,10 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
       setIsDeleting(false);
       setShowDeleteDialog(false);
     }
+  };
+
+  const handleUnlockClick = () => {
+    setShowMasterPassphraseModal(true);
   };
 
   const handleEditClick = () => {
@@ -189,6 +181,7 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
         showToastOnce('edit-success', 'success', "Item updated successfully!");
         setShowEditDialog(false);
         onClose();
+        onDelete?.(); // Refresh list to show updates (reusing onDelete prop for refresh)
       } else {
         const errorData = await response.json();
         showToastOnce('edit-error', 'error', errorData.message || "Failed to update");
@@ -201,44 +194,19 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
     }
   };
 
-  const handleTogglePassword = () => {
-    if (decryptedData) {
-      setShowPassword(!showPassword);
-    } else {
-      handleViewSensitive();
-    }
-  };
-
-  const handleToggleTotp = () => {
-    if (decryptedData) {
-      setShowTotp(!showTotp);
-    } else {
-      handleViewSensitive();
-    }
-  };
-
   return (
     <>
-      <ItemViewDialog
+      <EnhancedItemDrawer
         isOpen={isOpen}
         onClose={handleModalClose}
         item={item}
-        canEdit={canEdit}
-        showPassword={showPassword}
-        showTotp={showTotp}
-        masterPassphrase={masterPassphrase}
-        decryptedData={decryptedData}
-        isCurrentlyDecrypting={isCurrentlyDecrypting}
-        isDeleting={isDeleting}
-        isEditing={isEditing}
-        isPending={isPending}
-        onTogglePassword={handleTogglePassword}
-        onToggleTotp={handleToggleTotp}
-        onCopySensitive={handleCopySensitive}
-        onViewSensitive={handleViewSensitive}
-        onUnlockItem={() => setShowMasterPassphraseModal(true)}
-        onDelete={handleDeleteClick}
+        decryptedData={activeDecryptedData}
+        userRole={userRole || (vaultType === 'org' ? 'member' : 'owner')} 
+        canDecrypt={!!ovkCryptoKey} 
+        canEdit={!!canEdit}
         onEdit={handleEditClick}
+        onUnlock={handleUnlockClick}
+        onDelete={handleDeleteClick} 
       />
 
       <DeleteConfirmDialog
@@ -252,10 +220,9 @@ export const ViewItemModal: React.FC<ViewItemModalProps> = ({
       <EditItemDialog
         isOpen={showEditDialog}
         onClose={() => setShowEditDialog(false)}
-        // @ts-expect-error onSave is a required prop
         onSave={handleEditSave}
         item={item}
-        // @ts-expect-error decryptedData is ensured to be present before opening the edit dialog
+        // @ts-expect-error legacy prop type mismatch
         decryptedData={decryptedData}
         isEditing={isEditing}
       />

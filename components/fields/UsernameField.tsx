@@ -18,28 +18,37 @@ export const UsernameField: React.FC<UsernameFieldProps> = ({
   const Icon = isEmail ? Mail : User;
 
   return (
-    <div className="space-y-2">
-      <label className="flex items-center text-sm font-medium text-gray-300">
-        <Icon className="w-4 h-4 mr-2" />
+    <div className="group space-y-2">
+      <label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5 ml-1 select-none">
+        <Icon className="w-3.5 h-3.5 text-gray-400" />
         {label}
       </label>
+      
       <div className="flex items-center gap-2">
         <input
           type="text"
           value={value}
           readOnly
-          className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-all duration-200 text-sm sm:text-base"
+          className="flex-1 w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 font-medium focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 shadow-sm cursor-default"
         />
+        
         {onCopy && (
           <button
             onClick={() => onCopy(value)}
-            className="p-2.5 sm:p-3 bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 hover:bg-gray-700/80 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+            className={`
+              shrink-0 p-3 rounded-xl border transition-all duration-200 shadow-sm
+              ${copied 
+                ? 'bg-green-50 border-green-200 text-green-600' 
+                : 'bg-white border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 hover:shadow-md active:scale-95'
+              }
+            `}
             title={`Copy ${label.toLowerCase()}`}
+            type="button"
           >
             {copied ? (
-              <Check className="w-4 h-4 text-green-500" />
+              <Check className="w-4 h-4" />
             ) : (
-              <Copy className="w-4 h-4 text-gray-400" />
+              <Copy className="w-4 h-4" />
             )}
           </button>
         )}

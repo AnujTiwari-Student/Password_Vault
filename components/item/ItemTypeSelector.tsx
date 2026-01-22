@@ -4,6 +4,7 @@ import { ITEM_TYPE_CONFIG } from './constants';
 import { ItemTypeConfig } from './types';
 import { ItemTypeEnum, ITEM_TYPES } from "@/schema/zod-schema";
 import { useFormContext } from "react-hook-form";
+import { Check } from "lucide-react";
 
 interface ItemTypeSelectorProps {
   selectedTypes: ItemTypeEnum[];
@@ -14,15 +15,20 @@ export const ItemTypeSelector: React.FC<ItemTypeSelectorProps> = ({
   selectedTypes,
   onToggleType,
 }) => {
+  // We keep this hook usage to ensure re-renders on form state changes if needed
+  // even if we don't explicitly use errors here (managed by parent or passed down)
   const { formState: { errors } } = useFormContext();
 
+  // Debug log preserved from original
   console.log(errors);
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <div>
-        <label className="text-white">What do you want to store?</label>
-        <p className="text-gray-400 text-sm mt-1">
+    <div className="space-y-4">
+      <div className="px-1">
+        <label className="text-gray-900 font-bold text-base block mb-1">
+          What do you want to store?
+        </label>
+        <p className="text-gray-500 text-sm">
           Select one or more types - you can combine them freely
         </p>
       </div>
@@ -38,49 +44,54 @@ export const ItemTypeSelector: React.FC<ItemTypeSelectorProps> = ({
               key={type}
               onClick={() => onToggleType(type)}
               className={`
-                relative p-3 sm:p-4 rounded-lg border cursor-pointer transition-all duration-200 hover:scale-[1.01]
+                group relative p-4 rounded-xl border cursor-pointer transition-all duration-200 
                 ${
                   isSelected
-                    ? `${config.color} border-current`
-                    : "bg-gray-800/50 border-gray-700 hover:border-gray-600"
+                    ? "bg-blue-50/80 border-blue-200 ring-1 ring-blue-100 shadow-sm"
+                    : "bg-white border-gray-200 hover:border-blue-300 hover:shadow-md"
                 }
               `}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-4">
+                {/* Checkbox */}
                 <div
-                  className={`w-4 h-4 border-2 rounded flex items-center justify-center mt-0.5 ${
-                    isSelected
-                      ? "bg-blue-600 border-blue-600"
-                      : "border-gray-400 bg-transparent"
-                  }`}
+                  className={`
+                    w-5 h-5 rounded-md flex items-center justify-center mt-0.5 transition-colors border
+                    ${
+                      isSelected
+                        ? "bg-blue-600 border-blue-600"
+                        : "bg-white border-gray-300 group-hover:border-blue-400"
+                    }
+                  `}
                 >
                   {isSelected && (
-                    <svg
-                      className="w-3 h-3 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
+                    <Check className="w-3.5 h-3.5 text-white stroke-3" />
                   )}
                 </div>
-                <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+
+                {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-white text-sm mb-1">
-                    {config.label}
-                  </h3>
-                  <p className="text-gray-400 text-xs mb-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Icon className={`w-4 h-4 ${isSelected ? "text-blue-700" : "text-gray-500 group-hover:text-blue-600"}`} />
+                    <h3 className={`font-bold text-sm ${isSelected ? "text-blue-900" : "text-gray-900"}`}>
+                      {config.label}
+                    </h3>
+                  </div>
+                  
+                  <p className="text-gray-500 text-xs mb-3 leading-relaxed">
                     {config.description}
                   </p>
-                  <div className="flex flex-wrap gap-1">
+                  
+                  <div className="flex flex-wrap gap-2">
                     {config.examples.map((example, idx) => (
                       <span
                         key={idx}
-                        className="text-xs bg-gray-700/50 text-gray-300 px-2 py-0.5 rounded"
+                        className={`
+                          text-[10px] px-2 py-1 rounded-md font-medium border
+                          ${isSelected 
+                            ? "bg-white/60 text-blue-700 border-blue-100" 
+                            : "bg-gray-50 text-gray-600 border-gray-100 group-hover:bg-blue-50/30"}
+                        `}
                       >
                         {example}
                       </span>
@@ -94,7 +105,8 @@ export const ItemTypeSelector: React.FC<ItemTypeSelectorProps> = ({
       </div>
 
       {selectedTypes.length === 0 && (
-        <p className="text-red-400 text-sm">
+        <p className="text-red-500 text-sm font-medium px-1 flex items-center gap-2 animate-in fade-in slide-in-from-left-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
           Please select at least one item type
         </p>
       )}

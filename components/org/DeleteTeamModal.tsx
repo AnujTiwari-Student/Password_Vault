@@ -1,11 +1,12 @@
 import React from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import axios from "axios";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FormError } from "../auth/form-error";
@@ -81,54 +82,67 @@ export const DeleteTeamModal: React.FC<DeleteTeamModalProps> = ({
     });
   };
 
+  const handleClose = () => {
+    setShowDeleteTeamModal(false);
+    setSelectedTeam(null);
+    setError(null);
+    setSuccess(null);
+  };
+
   return (
-    <Dialog open={showDeleteTeamModal} onOpenChange={setShowDeleteTeamModal}>
-      <DialogContent className="sm:max-w-md bg-gray-900 border-gray-700 text-white">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2.5">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-            Delete Team
-          </DialogTitle>
+    <Dialog open={showDeleteTeamModal} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md bg-white border-gray-200 shadow-xl p-0 overflow-hidden gap-0 rounded-2xl">
+        <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-red-50 rounded-xl border border-red-100">
+              <Trash2 className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold text-gray-900">
+                Delete Team
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-500 mt-0.5">
+                This action cannot be undone.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="p-6 space-y-5">
           {selectedTeam && (
-            <div className="p-4 bg-red-900/20 border border-red-700/30 rounded-lg">
-              <p className="text-sm font-semibold text-white mb-2">
-                Are you sure you want to delete the {selectedTeam.name} team?
-              </p>
-              <p className="text-xs text-red-300">
-                This action cannot be undone. All team members will lose their
-                team-specific access.
-              </p>
+            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-red-900 mb-1">
+                  Are you sure you want to delete &quot;{selectedTeam.name}&quot;?
+                </p>
+                <p className="text-xs text-red-700 leading-relaxed">
+                  All members will be removed from this team, and any team-specific access policies will be permanently lost.
+                </p>
+              </div>
             </div>
           )}
 
           <FormError message={error} />
           <FormSuccess message={success} />
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
-              onClick={() => {
-                setShowDeleteTeamModal(false);
-                setSelectedTeam(null);
-                setError(null);
-                setSuccess(null);
-              }}
-              className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+              onClick={handleClose}
+              className="flex-1 h-11 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl font-medium"
               disabled={isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={handleDeleteTeam}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow-sm hover:shadow-md transition-all"
               disabled={isPending}
             >
               {isPending ? (
                 <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Deleting...
                 </div>
               ) : (

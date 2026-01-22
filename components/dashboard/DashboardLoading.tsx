@@ -4,7 +4,7 @@ import React from 'react';
 
 export const DashboardLoading: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+    <div className="min-h-scree text-white flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="relative w-16 h-16">
           <div className="absolute top-0 left-0 w-full h-full border-4 border-gray-700 rounded-full"></div>

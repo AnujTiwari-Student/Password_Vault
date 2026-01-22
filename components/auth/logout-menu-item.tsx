@@ -18,16 +18,17 @@ export function LogoutMenuItem() {
     <DropdownMenuItem
       onClick={handleLogout}
       disabled={isPending}
-      className={`flex items-center gap-2 text-white transition ${
-        isPending
-          ? "opacity-50 cursor-not-allowed"
-          : "hover:bg-gray-700 focus:bg-gray-700"
-      }`}
+      className={`
+        gap-2 p-2 cursor-pointer rounded-lg transition-colors duration-200
+        text-gray-700 hover:text-red-600 hover:bg-red-50 
+        focus:bg-red-50 focus:text-red-600
+        ${isPending ? "opacity-50 cursor-not-allowed" : ""}
+      `}
     >
-      <LogOut className="w-4 h-4" />
-      <p className="text-white">
+      <LogOut className="size-4" />
+      <span className="font-medium text-sm">
         {isPending ? "Logging out..." : "Log out"}
-      </p>
+      </span>
     </DropdownMenuItem>
   );
 }

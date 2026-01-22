@@ -6,12 +6,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, PencilLine } from 'lucide-react';
 import { APIVaultItem } from '@/types/vault';
 
 interface FormData {
@@ -89,72 +88,89 @@ export const EditItemDialog: React.FC<EditItemDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="max-w-2xl bg-gray-800 border-gray-700 text-white">
-        <DialogHeader>
-          <DialogTitle>Edit Item: {item.name}</DialogTitle>
-          <DialogDescription>Update the name and URL for this vault item</DialogDescription>
+      <DialogContent className="max-w-xl bg-white border border-gray-200 text-gray-900 shadow-2xl rounded-2xl p-0 gap-0 overflow-hidden">
+        
+        {/* Header */}
+        <DialogHeader className="px-6 py-5 border-b border-gray-100 bg-white">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
+              <PencilLine className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-bold text-gray-900">Edit Item</DialogTitle>
+              <DialogDescription className="text-gray-500 mt-0.5">
+                Update the basic details for <span className="font-medium text-gray-900">{item.name}</span>
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-3 mb-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-            <p className="text-blue-300 text-sm">
-              Currently only name and URL can be edited. To change encrypted fields (password, username, etc.), please create a new item.
+        <div className="p-6 space-y-6">
+          {/* Info Alert */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-blue-700 text-sm leading-relaxed">
+              <span className="font-semibold">Note:</span> Currently only name and URL can be edited. To change encrypted fields (password, username), please create a new version of this item.
             </p>
           </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                Name
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                className="bg-white border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 h-11 rounded-xl transition-all"
+                disabled={isEditing}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="url" className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                Website URL
+              </Label>
+              <Input
+                id="url"
+                value={formData.url}
+                onChange={(e) => handleChange('url', e.target.value)}
+                className="bg-white border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 h-11 rounded-xl transition-all placeholder:text-gray-400"
+                disabled={isEditing}
+                placeholder="https://example.com"
+              />
+            </div>
+
+            {/* Footer placed inside form to handle submit naturally, but styled at bottom */}
+            <div className="pt-2 flex gap-3 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isEditing}
+                className="bg-white hover:bg-gray-50 text-gray-700 border-gray-200 px-5 rounded-xl h-11 font-medium"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isEditing}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-xl h-11 font-medium shadow-sm hover:shadow-md transition-all"
+              >
+                {isEditing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving Changes...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </div>
+          </form>
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              className="bg-gray-900 border-gray-700 text-white focus:border-blue-500"
-              disabled={isEditing}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="url">Website</Label>
-            <Input
-              id="url"
-              value={formData.url}
-              onChange={(e) => handleChange('url', e.target.value)}
-              className="bg-gray-900 border-gray-700 text-white focus:border-blue-500"
-              disabled={isEditing}
-              placeholder="https://example.com"
-            />
-          </div>
-
-          <DialogFooter className="gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isEditing}
-              className="bg-transparent hover:bg-gray-700 text-gray-300 border-gray-600"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isEditing}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isEditing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
       </DialogContent>
     </Dialog>
   );

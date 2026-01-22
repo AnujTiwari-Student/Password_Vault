@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield } from 'lucide-react';
+import { ShieldCheck, Copy, Check, Lock } from 'lucide-react';
 
 interface APIVaultItem {
   id: string;
@@ -23,38 +23,49 @@ interface TOTPItemContentProps {
 
 export const TOTPItemContent: React.FC<TOTPItemContentProps> = ({ item, copiedField, handleCopy }) => {
   return (
-    <div className="space-y-4 p-4 bg-green-900/10 rounded-xl border border-green-700/30">
-      <h3 className="text-green-300 font-semibold flex items-center gap-2 text-sm sm:text-base">
-        <Shield className="w-4 h-4" />
-        Two-Factor Authentication
-      </h3>
+    <div className="space-y-6 p-6 bg-white rounded-xl border border-gray-200 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
+        <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-100 shadow-sm">
+          <ShieldCheck className="w-5 h-5 text-emerald-600" />
+        </div>
+        <div>
+          <h3 className="text-gray-900 font-bold text-sm uppercase tracking-wide">
+            Two-Factor Auth
+          </h3>
+          <p className="text-xs text-gray-500 font-medium mt-0.5">
+            Time-based One-Time Password
+          </p>
+        </div>
+      </div>
       
       {item.totp_seed_ct && (
         <div className="space-y-2">
-          <label className="flex items-center text-sm font-medium text-gray-300">
-            <Shield className="w-4 h-4 mr-2" />
-            TOTP Secret (Encrypted)
+          <label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5 ml-1">
+            <Lock className="w-3.5 h-3.5 text-gray-400" />
+            TOTP Secret
           </label>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-green-900/30 to-blue-900/30 border-2 border-green-700/50 rounded-xl">
-              <div className="flex items-center justify-between">
-                <span 
-                  className="text-green-300 font-mono text-sm cursor-pointer"
-                  onClick={() => handleCopy(item.totp_seed_ct!, 'totp')}
-                >
-                  [Encrypted TOTP Secret - Click to Copy]
-                </span>
-              </div>
-            </div>
+          
+          <div className="relative group">
+            <input
+              type="text"
+              value="[Encrypted Secret Key]"
+              readOnly
+              className="w-full pl-4 pr-12 py-3 bg-emerald-50/30 border border-emerald-100 rounded-xl text-sm text-emerald-800 font-medium cursor-pointer focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all hover:bg-emerald-50 hover:border-emerald-200"
+              onClick={() => handleCopy(item.totp_seed_ct!, 'totp')}
+            />
+            
             <button
               onClick={() => handleCopy(item.totp_seed_ct!, 'totp')}
-              className="p-2.5 sm:p-3 bg-green-800/80 backdrop-blur-sm border border-green-700/50 hover:bg-green-700/80 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-emerald-600/70 hover:text-emerald-700 hover:bg-emerald-100 rounded-lg transition-all"
               title="Copy encrypted TOTP secret"
             >
-              {copiedField === 'totp' ? '✓' : '📋'}
+              {copiedField === 'totp' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             </button>
           </div>
-          <p className="text-xs text-gray-500">Encrypted TOTP secret - decrypt to generate 2FA codes</p>
+          
+          <p className="text-[10px] text-gray-400 pl-1 leading-relaxed">
+            This secret key generates your 2FA codes. It is stored in encrypted format.
+          </p>
         </div>
       )}
     </div>

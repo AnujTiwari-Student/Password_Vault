@@ -118,19 +118,19 @@ export function AppSidebar({
   };
 
   return (
-    <Sidebar className="py-2" variant="sidebar" collapsible="icon" {...props}>
-      <SidebarHeader className="bg-gray-900">
+    <Sidebar className="py-2 border-r border-gray-200" variant="sidebar" collapsible="icon" {...props}>
+      <SidebarHeader className="bg-white">
         {/* @ts-expect-error Todo: Type missmatch */}
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
-      <SidebarContent className="bg-gray-900">
+      <SidebarContent className="bg-white">
         <NavMain
           items={data.navMain}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
         />
       </SidebarContent>
-      <SidebarFooter className="bg-gray-900">
+      <SidebarFooter className="bg-white border-t border-gray-100">
         {/* @ts-expect-error Todo: Type missmatch */}
         <NavUser user={user} onTabChange={setActiveTab} />
       </SidebarFooter>

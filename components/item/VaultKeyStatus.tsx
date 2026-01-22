@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, RefreshCw, Check } from "lucide-react";
+import { AlertCircle, RefreshCw, CheckCircle2 } from "lucide-react";
 
 interface VaultKeyStatusProps {
   mnemonic: string;
@@ -16,31 +16,28 @@ export const VaultKeyStatus: React.FC<VaultKeyStatusProps> = ({
   if (!mnemonic) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {ovkError && (
-        <div className="p-3 bg-red-900/20 border border-red-700/50 rounded-lg">
-          <p className="text-red-300 text-sm flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>Vault key error: {ovkError}</span>
-          </p>
+        <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 shadow-sm">
+          <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-red-900 font-semibold text-sm">Vault Key Error</p>
+            <p className="text-red-700 text-xs">{ovkError}</p>
+          </div>
         </div>
       )}
       
       {!ovkError && !ovkCryptoKey && (
-        <div className="p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
-          <p className="text-blue-300 text-sm flex items-center gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin flex-shrink-0" />
-            <span>Loading vault encryption key...</span>
-          </p>
+        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 shadow-sm">
+          <RefreshCw className="w-5 h-5 text-blue-600 animate-spin shrink-0" />
+          <span className="text-blue-900 text-sm font-medium">Initializing encryption keys...</span>
         </div>
       )}
       
       {ovkCryptoKey && !ovkError && (
-        <div className="p-3 bg-green-900/20 border border-green-700/50 rounded-lg">
-          <p className="text-green-300 text-sm flex items-center gap-2">
-            <Check className="w-4 h-4 flex-shrink-0" />
-            <span>Vault ready - You can now create items</span>
-          </p>
+        <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3 shadow-sm">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span className="text-emerald-900 text-sm font-medium">Encryption Active - Vault Ready</span>
         </div>
       )}
     </div>

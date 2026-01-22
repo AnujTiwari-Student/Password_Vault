@@ -28,34 +28,34 @@ export const AuditTableDesktop: React.FC<AuditTableDesktopProps> = ({
   onPrevPage,
 }) => {
   return (
-    <div className="hidden lg:block bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+    <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-900/50">
-            <tr className="border-b border-gray-700">
-              <th className="text-left py-4 px-6 text-gray-400 font-medium text-sm uppercase tracking-wider">Actor</th>
-              <th className="text-left py-4 px-6 text-gray-400 font-medium text-sm uppercase tracking-wider">Action</th>
-              <th className="text-left py-4 px-6 text-gray-400 font-medium text-sm uppercase tracking-wider">Item</th>
-              <th className="text-left py-4 px-6 text-gray-400 font-medium text-sm uppercase tracking-wider">Date & Time</th>
-              {isOrgAccount && <th className="text-left py-4 px-6 text-gray-400 font-medium text-sm uppercase tracking-wider">IP</th>}
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="text-left py-4 px-6 text-gray-600 font-bold text-sm uppercase tracking-wider">Actor</th>
+              <th className="text-left py-4 px-6 text-gray-600 font-bold text-sm uppercase tracking-wider">Action</th>
+              <th className="text-left py-4 px-6 text-gray-600 font-bold text-sm uppercase tracking-wider">Item</th>
+              <th className="text-left py-4 px-6 text-gray-600 font-bold text-sm uppercase tracking-wider">Date & Time</th>
+              {isOrgAccount && <th className="text-left py-4 px-6 text-gray-600 font-bold text-sm uppercase tracking-wider">IP Address</th>}
             </tr>
           </thead>
           <tbody>
             {logs.map((log, index) => (
               <tr 
                 key={log.id} 
-                className={`border-b border-gray-700/50 hover:bg-gray-750 transition-colors ${
-                  index % 2 === 0 ? 'bg-gray-800/30' : 'bg-gray-800/10'
+                className={`border-b border-gray-200 hover:bg-blue-50 transition-colors ${
+                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                 }`}
               >
-                <td className="py-4 px-6 text-white text-sm font-medium">{log.actor}</td>
+                <td className="py-4 px-6 text-gray-900 text-sm font-semibold">{log.actor}</td>
                 <td className="py-4 px-6">
-                  <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-semibold ${getSeverityColor(log.severity)}`}>
+                  <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold ${getSeverityColor(log.severity)}`}>
                     {log.action.replace(/_/g, ' ').toLowerCase()}
                   </span>
                 </td>
-                <td className="py-4 px-6 text-gray-400 text-sm">{log.item}</td>
-                <td className="py-4 px-6 text-gray-400 text-sm">{log.date}</td>
+                <td className="py-4 px-6 text-gray-700 text-sm font-medium">{log.item}</td>
+                <td className="py-4 px-6 text-gray-600 text-sm">{log.date}</td>
                 {isOrgAccount && <td className="py-4 px-6 text-gray-500 text-xs font-mono">{log.ip || '-'}</td>}
               </tr>
             ))}

@@ -65,56 +65,58 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity"
         onClick={onClose}
       />
 
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl minimal-scrollbar"
+          className="bg-white rounded-xl border border-gray-200 w-full max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
-            <h2 className="text-xl font-bold text-white">Manage Subscription</h2>
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+            <h2 className="text-xl font-bold text-gray-900">Manage Subscription</h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
               aria-label="Close modal"
             >
-              <X size={20} className="text-gray-400" />
+              <X size={20} className="text-gray-600" />
             </button>
           </div>
 
-          <div className="p-6 space-y-6">
-            <div className="bg-gray-750 rounded-lg p-5 border border-gray-700">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <CheckCircle size={20} className="text-green-400" />
+          <div className="p-6 space-y-5">
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center border border-green-100">
+                  <CheckCircle size={18} className="text-green-600" />
+                </div>
                 Current Subscription
               </h3>
               <div className="grid gap-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Plan</span>
-                  <span className="text-white font-semibold">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600 text-sm font-medium">Plan</span>
+                  <span className="text-gray-900 font-semibold">
                     {currentPlanDetails?.name || "Unknown"}
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Status</span>
-                  <span className="text-green-400 font-semibold capitalize">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600 text-sm font-medium">Status</span>
+                  <span className="text-green-600 font-semibold capitalize">
                     {billingData?.status || "Active"}
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Amount</span>
-                  <span className="text-white font-semibold">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                  <span className="text-gray-600 text-sm font-medium">Amount</span>
+                  <span className="text-gray-900 font-semibold">
                     ₹{billingData?.amount?.toFixed(2) || "0.00"}/
                     {billingData?.billingCycle === "annually" ? "year" : "month"}
                   </span>
                 </div>
                 {billingData?.nextBillingDate && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400 text-sm">Next Billing Date</span>
-                    <span className="text-white font-semibold">
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600 text-sm font-medium">Next Billing Date</span>
+                    <span className="text-gray-900 font-semibold">
                       {new Date(billingData.nextBillingDate).toLocaleDateString("en-IN", {
                         year: "numeric",
                         month: "long",
@@ -124,8 +126,8 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                   </div>
                 )}
                 {billingData?.cancelAtPeriodEnd && (
-                  <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                    <p className="text-yellow-400 text-sm flex items-center gap-2">
+                  <div className="mt-2 p-3 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+                    <p className="text-yellow-700 text-sm flex items-center gap-2 font-medium">
                       <AlertTriangle size={16} />
                       Your subscription will be canceled at the end of the billing period
                     </p>
@@ -134,45 +136,49 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
               </div>
             </div>
 
-            <div className="bg-gray-750 rounded-lg p-5 border border-gray-700">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <CreditCard size={20} className="text-blue-400" />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
+                  <CreditCard size={18} className="text-blue-600" />
+                </div>
                 Payment Method
               </h3>
               <div className="flex justify-between items-center">
-                <span className="text-gray-400 text-sm">Current Method</span>
-                <span className="text-white font-semibold">
+                <span className="text-gray-600 text-sm font-medium">Current Method</span>
+                <span className="text-gray-900 font-semibold">
                   {billingData?.paymentMethod || "Razorpay"}
                 </span>
               </div>
             </div>
 
-            <div className="bg-gray-750 rounded-lg p-5 border border-gray-700">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Calendar size={20} className="text-purple-400" />
+            <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center border border-purple-100">
+                  <Calendar size={18} className="text-purple-600" />
+                </div>
                 Billing Cycle
               </h3>
               <div className="flex justify-between items-center">
-                <span className="text-gray-400 text-sm">Cycle</span>
-                <span className="text-white font-semibold capitalize">
+                <span className="text-gray-600 text-sm font-medium">Cycle</span>
+                <span className="text-gray-900 font-semibold capitalize">
                   {billingData?.billingCycle === "annually" ? "Yearly" : "Monthly"}
                 </span>
               </div>
             </div>
 
             {!billingData?.cancelAtPeriodEnd && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-5">
-                <h3 className="text-lg font-semibold text-red-400 mb-2 flex items-center gap-2">
+              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-5">
+                <h3 className="text-lg font-semibold text-red-700 mb-2 flex items-center gap-2">
                   <AlertTriangle size={20} />
                   Cancel Subscription
                 </h3>
-                <p className="text-gray-400 text-sm mb-4">
+                <p className="text-gray-700 text-sm mb-4 leading-relaxed">
                   You will have access until the end of your current billing period. Your subscription will not auto-renew.
                 </p>
                 <button
                   onClick={handleCancelSubscription}
                   disabled={isCancelling}
-                  className="w-full px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 border border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-semibold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isCancelling ? (
                     <>
@@ -190,12 +196,12 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
             )}
 
             {billingData?.cancelAtPeriodEnd && (
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-5">
-                <h3 className="text-lg font-semibold text-yellow-400 mb-2 flex items-center gap-2">
+              <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-5">
+                <h3 className="text-lg font-semibold text-yellow-700 mb-2 flex items-center gap-2">
                   <AlertTriangle size={20} />
                   Subscription Scheduled for Cancellation
                 </h3>
-                <p className="text-gray-400 text-sm">
+                <p className="text-gray-700 text-sm leading-relaxed">
                   Your subscription is set to cancel on{" "}
                   {billingData.nextBillingDate && 
                     new Date(billingData.nextBillingDate).toLocaleDateString("en-IN", {
@@ -209,10 +215,10 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-700">
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
             <button
               onClick={onClose}
-              className="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm font-medium border border-gray-600"
+              className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg transition-colors text-sm font-semibold border border-gray-300 shadow-sm"
             >
               Close
             </button>

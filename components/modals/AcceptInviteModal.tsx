@@ -175,15 +175,15 @@ export const AcceptInviteModal: React.FC<AcceptInviteModalProps> = ({
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'owner':
-        return 'bg-yellow-900/30 text-yellow-300 border-yellow-700/30 border';
+        return 'bg-amber-50 text-amber-700 border-amber-200 border';
       case 'admin':
-        return 'bg-blue-900/30 text-blue-300 border-blue-700/30 border';
+        return 'bg-blue-50 text-blue-700 border-blue-200 border';
       case 'member':
-        return 'bg-gray-700/50 text-gray-400';
+        return 'bg-gray-100 text-gray-700 border-gray-200 border';
       case 'viewer':
-        return 'bg-purple-900/30 text-purple-300 border-purple-700/30 border';
+        return 'bg-purple-50 text-purple-700 border-purple-200 border';
       default:
-        return 'bg-gray-700/50 text-gray-400';
+        return 'bg-gray-50 text-gray-600 border-gray-200 border';
     }
   };
 
@@ -194,153 +194,147 @@ export const AcceptInviteModal: React.FC<AcceptInviteModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg bg-gray-900/95 border-gray-700/50 text-white">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-400" />
-            Organization Invitation
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Invitation Details */}
-          <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700/30">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <Building2 className="w-5 h-5 text-white" />
+      <DialogContent className="w-full max-w-md sm:max-w-lg bg-white border border-gray-200 shadow-xl p-0 gap-0 overflow-hidden sm:rounded-2xl flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-gray-100 bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5 text-xl font-bold text-gray-900">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Building2 className="w-5 h-5 text-blue-600" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-white mb-1">
+              Accept Invitation
+            </DialogTitle>
+          </DialogHeader>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+          
+          {/* Invitation Card */}
+          <div className="bg-gray-50/50 rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="flex-1 space-y-1">
+                <h3 className="font-bold text-lg text-gray-900 leading-tight">
                   {invitation.org.name}
                 </h3>
-                <p className="text-sm text-gray-300">
-                  <span className="font-medium">{invitation.invitedBy.name}</span> invited you to join this organization
+                <p className="text-sm text-gray-500">
+                  Invited by <span className="font-semibold text-gray-700">{invitation.invitedBy.name}</span>
                 </p>
+              </div>
+              
+              <div className={`
+                inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide self-start
+                ${getRoleBadgeColor(invitation.role)}
+              `}>
+                <RoleIcon className="w-3.5 h-3.5" />
+                {invitation.role}
               </div>
             </div>
             
-            <div className="flex items-center justify-between">
-              <span className={`px-2 py-1 text-xs rounded ${getRoleBadgeColor(invitation.role)}`}>
-                <RoleIcon className="w-3 h-3 inline mr-1" />
-                {invitation.role}
-              </span>
-              <span className="text-xs text-gray-500">
-                Expires {new Date(invitation.expires_at).toLocaleDateString()}
-              </span>
+            <div className="mt-4 pt-3 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+              <span>Organization Invite</span>
+              <span>Expires {new Date(invitation.expires_at).toLocaleDateString()}</span>
             </div>
           </div>
 
-          {/* Role Permissions Info */}
-          <div className="p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
-            <p className="text-sm font-medium text-blue-300 mb-1">
-              As a {invitation.role}, you will be able to:
+          {/* Role Permissions */}
+          <div className="bg-blue-50 rounded-xl border border-blue-100 p-4">
+            <p className="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-blue-600" />
+              Access & Permissions
             </p>
-            <ul className="text-xs text-blue-200 space-y-1">
+            <ul className="space-y-1.5">
               {invitation.role === 'owner' && (
                 <>
-                  <li>• Full control over the organization</li>
-                  <li>• Manage all members and settings</li>
-                  <li>• Access all vaults and resources</li>
+                  <li className="text-xs text-blue-700 flex items-start gap-2">• Full control over the organization</li>
+                  <li className="text-xs text-blue-700 flex items-start gap-2">• Manage all members and settings</li>
                 </>
               )}
               {invitation.role === 'admin' && (
                 <>
-                  <li>• Manage organization members</li>
-                  <li>• Create and manage teams</li>
-                  <li>• Access all organizational resources</li>
+                  <li className="text-xs text-blue-700 flex items-start gap-2">• Manage organization members and teams</li>
+                  <li className="text-xs text-blue-700 flex items-start gap-2">• Access all organizational resources</li>
                 </>
               )}
               {invitation.role === 'member' && (
                 <>
-                  <li>• Access assigned organizational resources</li>
-                  <li>• Collaborate with team members</li>
-                  <li>• View and use shared vaults</li>
+                  <li className="text-xs text-blue-700 flex items-start gap-2">• Access assigned organizational resources</li>
+                  <li className="text-xs text-blue-700 flex items-start gap-2">• Collaborate with team members</li>
                 </>
               )}
               {invitation.role === 'viewer' && (
                 <>
-                  <li>• View organizational resources</li>
-                  <li>• Read-only access to shared content</li>
+                  <li className="text-xs text-blue-700 flex items-start gap-2">• View organizational resources</li>
+                  <li className="text-xs text-blue-700 flex items-start gap-2">• Read-only access to shared content</li>
                 </>
               )}
             </ul>
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-              <Key className="w-4 h-4" />
-              Master Passphrase *
-            </label>
-            <Textarea
-              value={masterPassphrase}
-              onChange={(e) => setMasterPassphrase(e.target.value)}
-              placeholder="Enter your 24-word master passphrase..."
-              className="bg-gray-800/50 border-gray-700/50 focus:border-gray-600 text-white font-mono text-sm min-h-[100px] resize-none"
-              disabled={accepting}
-            />
-            <div className="flex justify-between items-center mt-2">
-              <p className="text-xs text-gray-400">
-                Required to securely access organization data
-              </p>
-              <span className={`text-xs px-2 py-1 rounded ${
+          {/* Passphrase Input */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                <Key className="w-4 h-4 text-gray-400" />
+                Master Passphrase
+              </label>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
                 wordCount === 24 
-                  ? 'bg-green-900/30 text-green-300' 
+                  ? 'bg-emerald-100 text-emerald-700' 
                   : wordCount > 0 
-                  ? 'bg-yellow-900/30 text-yellow-300'
-                  : 'bg-gray-700/50 text-gray-400'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-gray-100 text-gray-500'
               }`}>
                 {wordCount}/24 words
               </span>
             </div>
-          </div>
-
-          {/* Security Warning */}
-          <div className="p-3 bg-amber-900/20 border border-amber-700/30 rounded-lg">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-amber-300 mb-1">
-                  Security Notice
-                </p>
-                <p className="text-xs text-amber-200">
-                  Your master passphrase is used to decrypt organization data. 
-                  It will never be stored or transmitted in plain text.
-                </p>
-              </div>
-            </div>
+            
+            <Textarea
+              value={masterPassphrase}
+              onChange={(e) => setMasterPassphrase(e.target.value)}
+              placeholder="Enter your 24-word master passphrase to verify identity..."
+              className="min-h-25 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl resize-none font-mono text-sm shadow-sm transition-all"
+              disabled={accepting}
+            />
+            
+            <p className="text-xs text-gray-500 flex items-start gap-1.5 pl-1">
+              <AlertCircle className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+              Required to securely unwrap the organization vault key.
+            </p>
           </div>
 
           <FormError message={error} />
           <FormSuccess message={success} />
+        </div>
 
-          <div className="flex gap-3">
-            <Button
-              onClick={handleReject}
-              variant="outline"
-              className="flex-1 bg-gray-700/50 border-gray-600/50 text-white hover:bg-gray-600/50"
-              disabled={accepting}
-            >
-              <X className="w-4 h-4 mr-1" />
-              Reject
-            </Button>
-            <Button
-              onClick={handleAccept}
-              className="flex-1 bg-green-600/90 hover:bg-green-700/90 text-white"
-              disabled={wordCount !== 24 || accepting}
-            >
-              {accepting ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  Accepting...
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4" />
-                  Accept & Join
-                </div>
-              )}
-            </Button>
-          </div>
+        {/* Footer Actions */}
+        <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col-reverse sm:flex-row gap-3">
+          <Button
+            onClick={handleReject}
+            variant="outline"
+            className="flex-1 bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 h-11 rounded-xl"
+            disabled={accepting}
+          >
+            <X className="w-4 h-4 mr-2" />
+            Reject Invite
+          </Button>
+          <Button
+            onClick={handleAccept}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white border-transparent h-11 rounded-xl shadow-sm hover:shadow-md transition-all"
+            disabled={wordCount !== 24 || accepting}
+          >
+            {accepting ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Processing...
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 font-semibold">
+                <Check className="w-4 h-4" />
+                Accept & Join
+              </div>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

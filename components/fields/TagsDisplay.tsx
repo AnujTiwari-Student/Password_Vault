@@ -7,12 +7,13 @@ interface TagsDisplayProps {
 
 const getTagColor = (tag: string) => {
   const colors = [
-    'bg-blue-900/50 text-blue-300 border-blue-700/50',
-    'bg-green-900/50 text-green-300 border-green-700/50',
-    'bg-purple-900/50 text-purple-300 border-purple-700/50',
-    'bg-orange-900/50 text-orange-300 border-orange-700/50',
-    'bg-pink-900/50 text-pink-300 border-pink-700/50',
-    'bg-indigo-900/50 text-indigo-300 border-indigo-700/50',
+    'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+    'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
+    'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
+    'bg-orange-50 text-orange-800 border-orange-200 hover:bg-orange-100',
+    'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100',
+    'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
+    'bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100',
   ];
   
   const hash = tag.split('').reduce((a, b) => {
@@ -27,18 +28,23 @@ export const TagsDisplay: React.FC<TagsDisplayProps> = ({ tags }) => {
   if (!tags || tags.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <label className="flex items-center text-sm font-medium text-gray-300">
-        <Tag className="w-4 h-4 mr-2" />
+    <div className="group space-y-2.5">
+      <label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5 ml-1 select-none">
+        <Tag className="w-3.5 h-3.5 text-gray-400" />
         Tags
       </label>
-      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+      
+      <div className="flex flex-wrap gap-2 p-1">
         {tags.map((tag, idx) => (
           <span
             key={idx}
-            className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full border backdrop-blur-sm transition-all hover:scale-105 ${getTagColor(tag)}`}
+            className={`
+              px-3 py-1 text-xs font-semibold rounded-lg border shadow-sm transition-all duration-200 
+              cursor-default hover:shadow-md select-none
+              ${getTagColor(tag)}
+            `}
           >
-            {tag}
+            #{tag}
           </span>
         ))}
       </div>

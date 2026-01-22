@@ -167,9 +167,14 @@ export function canManageMembers(
 export function formatTimestamp(
   timestamp: string | Date
 ): string {
+  if (!timestamp) return "N/A";
+  
   const date = typeof timestamp === "string"
     ? new Date(timestamp)
     : timestamp;
+
+  // Check for invalid date
+  if (isNaN(date.getTime())) return "Invalid Date";
 
   return date.toLocaleString(undefined, {
     year: "numeric",
@@ -181,35 +186,45 @@ export function formatTimestamp(
 }
 
 /* ---------------------------------- */
-/* 🎨 UI helpers                       */
+/* 🎨 UI helpers (Updated for Light Mode) */
 /* ---------------------------------- */
 export function getRoleBadgeColor(
-  role: MemberRole | null
+  role: MemberRole | null | undefined
 ): string {
   switch (role) {
     case "owner":
-      return "bg-yellow-900/30 text-yellow-300 border-yellow-700/30 border";
+      // Gold/Amber for Owner
+      return "bg-amber-50 text-amber-700 border-amber-200 border";
     case "admin":
-      return "bg-blue-900/30 text-blue-300 border-blue-700/30 border";
+      // Blue for Admin
+      return "bg-blue-50 text-blue-700 border-blue-200 border";
     case "member":
-      return "bg-gray-700/50 text-gray-300 border-gray-600/30 border";
+      // Green/Teal for Member
+      return "bg-emerald-50 text-emerald-700 border-emerald-200 border";
     case "viewer":
-      return "bg-purple-900/30 text-purple-300 border-purple-700/30 border";
+      // Gray for Viewer
+      return "bg-gray-50 text-gray-600 border-gray-200 border";
     default:
-      return "bg-gray-700/30 text-gray-400 border-gray-600/30 border";
+      return "bg-gray-50 text-gray-500 border-gray-200 border";
   }
 }
 
 export function getMultiTypeColor(types: string[]): string {
-  if (types.includes("password")) {
-    return "bg-red-900/30 text-red-300 border-red-700/30";
+  if (!types || types.length === 0) return "bg-gray-50 text-gray-600 border-gray-200";
+
+  // Priority based coloring
+  if (types.includes("login") || types.includes("password")) {
+    return "bg-blue-50 text-blue-700 border-blue-200";
   }
   if (types.includes("note")) {
-    return "bg-purple-900/30 text-purple-300 border-purple-700/30";
+    return "bg-purple-50 text-purple-700 border-purple-200";
   }
-  if (types.includes("login")) {
-    return "bg-blue-900/30 text-blue-300 border-blue-700/30";
+  if (types.includes("totp")) {
+    return "bg-emerald-50 text-emerald-700 border-emerald-200";
   }
-  return "bg-gray-700/30 text-gray-300 border-gray-600/30";
+  if (types.includes("card") || types.includes("financial")) {
+    return "bg-amber-50 text-amber-700 border-amber-200";
+  }
+  
+  return "bg-gray-50 text-gray-600 border-gray-200";
 }
-

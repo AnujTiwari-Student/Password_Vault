@@ -47,19 +47,19 @@ export const VaultLimitsDisplay: React.FC<VaultLimitsDisplayProps> = ({ vault })
   }, [vault.id]);
 
   const getUsageColor = (used: number, limit: number): string => {
-    if (limit === -1 || limit === 0) return 'text-green-400';
+    if (limit === -1 || limit === 0) return 'text-green-600';
     const percentage = (used / limit) * 100;
-    if (percentage >= 90) return 'text-red-400';
-    if (percentage >= 70) return 'text-yellow-400';
-    return 'text-green-400';
+    if (percentage >= 90) return 'text-red-600';
+    if (percentage >= 70) return 'text-amber-600';
+    return 'text-green-600';
   };
 
   const getProgressColor = (used: number, limit: number): string => {
-    if (limit === -1 || limit === 0) return 'bg-blue-500';
+    if (limit === -1 || limit === 0) return 'bg-blue-600';
     const percentage = (used / limit) * 100;
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 70) return 'bg-yellow-500';
-    return 'bg-blue-500';
+    if (percentage >= 90) return 'bg-red-600';
+    if (percentage >= 70) return 'bg-amber-600';
+    return 'bg-blue-600';
   };
 
   const calculatePercentage = (used: number, limit: number): number => {
@@ -74,10 +74,10 @@ export const VaultLimitsDisplay: React.FC<VaultLimitsDisplayProps> = ({ vault })
 
   if (loading) {
     return (
-      <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          <span className="ml-3 text-gray-400">Loading usage data...</span>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <div className="flex items-center justify-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          <span className="text-gray-600 font-medium">Loading usage data...</span>
         </div>
       </div>
     );
@@ -85,138 +85,137 @@ export const VaultLimitsDisplay: React.FC<VaultLimitsDisplayProps> = ({ vault })
 
   if (!usage) {
     return (
-      <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30">
-        <p className="text-gray-400">Failed to load usage data</p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <div className="text-center py-12">
+          <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Failed to load usage data</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30">
-      <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        <Database className="w-5 h-5" />
-        Usage & Limits
-      </h3>
-      
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
+          <Database className="w-5 h-5 text-blue-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Usage & Limits</h3>
+          <p className="text-sm text-gray-600">Current plan usage overview</p>
+        </div>
+      </div>
+
       <div className="space-y-6">
         {/* Current Plan Badge */}
-        <div className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
           <div>
-            <p className="font-medium text-white">Current Plan</p>
-            <p className="text-sm text-gray-400 capitalize">{userPlan.replace('_', ' ')}</p>
+            <p className="font-semibold text-gray-900 text-sm">Current Plan</p>
+            <p className="text-xs text-gray-500 capitalize font-medium">{userPlan.replace('_', ' ')}</p>
           </div>
-          <div className={`px-3 py-1 rounded-full text-xs border ${
+          <div className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex-shrink-0 ${
             userPlan === 'free' 
-              ? 'bg-gray-900/30 text-gray-300 border-gray-700/30'
+              ? 'bg-gray-100 text-gray-700 border-gray-200'
               : userPlan === 'pro'
-              ? 'bg-blue-900/30 text-blue-300 border-blue-700/30'
-              : 'bg-purple-900/30 text-purple-300 border-purple-700/30'
+              ? 'bg-blue-100 text-blue-800 border-blue-200'
+              : 'bg-purple-100 text-purple-800 border-purple-200'
           }`}>
             {userPlan.toUpperCase()}
           </div>
         </div>
 
-        {/* Usage Bars */}
-        <div className="space-y-4">
-          {/* Items/Passwords */}
-          <div className="space-y-2">
+        {/* Usage Metrics */}
+        <div className="space-y-6">
+          {/* Vault Items */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-300">Vault Items</span>
-              <span className={`text-sm font-medium ${getUsageColor(usage.passwords.current, usage.passwords.limit)}`}>
+              <span className="text-sm font-semibold text-gray-900">Vault Items</span>
+              <span className={`text-sm font-semibold ${getUsageColor(usage.passwords.current, usage.passwords.limit)}`}>
                 {usage.passwords.current} / {formatLimit(usage.passwords.limit)}
               </span>
             </div>
-            <div className="w-full bg-gray-700/50 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
               <div
-                className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(usage.passwords.current, usage.passwords.limit)}`}
+                className={`h-2 rounded-full transition-all duration-700 ease-out shadow-sm ${getProgressColor(usage.passwords.current, usage.passwords.limit)}`}
                 style={{ width: `${calculatePercentage(usage.passwords.current, usage.passwords.limit)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 font-medium">
               {calculatePercentage(usage.passwords.current, usage.passwords.limit).toFixed(1)}% used
             </p>
           </div>
 
           {/* Members (org vaults only) */}
           {vault.type === 'org' && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-300">Organization Members</span>
-                <span className={`text-sm font-medium ${getUsageColor(usage.members.current, usage.members.limit)}`}>
+                <span className="text-sm font-semibold text-gray-900">Organization Members</span>
+                <span className={`text-sm font-semibold ${getUsageColor(usage.members.current, usage.members.limit)}`}>
                   {usage.members.current} / {formatLimit(usage.members.limit)}
                 </span>
               </div>
-              <div className="w-full bg-gray-700/50 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div
-                  className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(usage.members.current, usage.members.limit)}`}
+                  className={`h-2 rounded-full transition-all duration-700 ease-out shadow-sm ${getProgressColor(usage.members.current, usage.members.limit)}`}
                   style={{ width: `${calculatePercentage(usage.members.current, usage.members.limit)}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 font-medium">
                 {calculatePercentage(usage.members.current, usage.members.limit).toFixed(1)}% used
               </p>
             </div>
           )}
 
           {/* Storage */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-300">Storage</span>
-              <span className={`text-sm font-medium ${getUsageColor(usage.storage.current, usage.storage.limit)}`}>
-                {(usage.storage.current / 1024 / 1024).toFixed(2)} MB / 
+              <span className="text-sm font-semibold text-gray-900">Storage</span>
+              <span className={`text-sm font-semibold ${getUsageColor(usage.storage.current, usage.storage.limit)}`}>
+                {(usage.storage.current / 1024 / 1024).toFixed(1)} MB / 
                 {usage.storage.limit === -1 ? ' ∞' : ` ${(usage.storage.limit / 1024 / 1024).toFixed(0)} MB`}
               </span>
             </div>
-            <div className="w-full bg-gray-700/50 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
               <div
-                className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(usage.storage.current, usage.storage.limit)}`}
+                className={`h-2 rounded-full transition-all duration-700 ease-out shadow-sm ${getProgressColor(usage.storage.current, usage.storage.limit)}`}
                 style={{ width: `${calculatePercentage(usage.storage.current, usage.storage.limit)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 font-medium">
               {calculatePercentage(usage.storage.current, usage.storage.limit).toFixed(1)}% used
             </p>
           </div>
+        </div>
 
-          {/* 2FA Status */}
-          <div className="pt-4 border-t border-gray-700/30">
-            <div className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
-              <span className="text-sm font-medium text-gray-300">Two-Factor Authentication</span>
-              <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+        <div className="gap-4 pt-2">
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-900">Two-Factor Authentication</span>
+              <div className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
                 usage.twoFaEnabled
-                  ? 'bg-green-900/30 text-green-300 border border-green-700/30'
-                  : 'bg-red-900/30 text-red-300 border border-red-700/30'
+                  ? 'bg-green-100 text-green-800 border border-green-200'
+                  : 'bg-red-100 text-red-800 border border-red-200'
               }`}>
                 {usage.twoFaEnabled ? 'Enabled' : 'Disabled'}
               </div>
             </div>
           </div>
+
+          {usage.passwords.limit > 0 && (usage.passwords.current / usage.passwords.limit) >= 0.9 && (
+            <div className="md:col-span-2 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-red-900 text-sm">Item Limit Warning</p>
+                  <p className="text-sm text-red-800">
+                    You are approaching your item limit. Consider upgrading your plan.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Warnings */}
-        {usage.passwords.limit > 0 && (usage.passwords.current / usage.passwords.limit) >= 0.9 && (
-          <div className="flex items-start gap-3 p-3 bg-red-900/20 border border-red-700/30 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-red-300 font-medium">Item Limit Warning</p>
-              <p className="text-sm text-red-200">
-                Youre approaching your item limit. Consider upgrading your plan to add more items.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* {userPlan === 'free' && (
-          <div className="flex items-start gap-3 p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
-            <CheckCircle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-blue-300 font-medium">Free Plan Limits</p>
-              <p className="text-sm text-blue-200">
-                Upgrade to Pro to get more storage, unlimited items, and advanced features.
-              </p>
-            </div>
-          </div>
-        )} */}
       </div>
     </div>
   );

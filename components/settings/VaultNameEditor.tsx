@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Edit, Save, X, Loader2, Check, ChevronsUpDown } from 'lucide-react';
+import { Edit, Save, X, Loader2, Check, ChevronsUpDown, Database } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -121,10 +121,10 @@ export const VaultNameEditor: React.FC = () => {
 
   if (fetchLoading) {
     return (
-      <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
-          <span className="ml-3 text-gray-400">Loading vaults...</span>
+          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          <span className="ml-3 text-gray-600 font-medium">Loading vaults...</span>
         </div>
       </div>
     );
@@ -132,26 +132,30 @@ export const VaultNameEditor: React.FC = () => {
 
   if (vaults.length === 0) {
     return (
-      <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30">
-        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Edit className="w-5 h-5" />
-          Vault Name
-        </h3>
-        <p className="text-gray-400">No org found</p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="text-center py-8">
+          <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4 border-2 border-gray-200">
+            <Database size={32} className="text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900">No Organization Found</h3>
+          <p className="text-sm text-gray-500 mt-1">Unable to locate organization data</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/30">
-      <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        <Edit className="w-5 h-5" />
-        Organization Name
-      </h3>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center gap-2 mb-6">
+        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
+          <Edit className="w-4 h-4 text-blue-600" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900">Organization Name</h3>
+      </div>
       
-      <div className="space-y-4">
-        <div className="relative">
-          <label className="block text-sm font-medium text-gray-400 mb-2">
+      <div className="space-y-5">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
             Select Vault
           </label>
           <Popover open={open} onOpenChange={setOpen}>
@@ -161,37 +165,53 @@ export const VaultNameEditor: React.FC = () => {
                 role="combobox"
                 aria-expanded={open}
                 disabled={isEditing}
-                className="w-full justify-between bg-gray-700/50 border-gray-600/50 text-white hover:bg-gray-700/70 hover:text-white disabled:opacity-50"
+                className="w-full justify-between bg-white border-gray-300 text-gray-900 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed h-11 font-medium"
               >
-                {selectedVault
-                  ? `${selectedVault.name} ${selectedVault.org_name ? `(${selectedVault.org_name})` : ''} - ${selectedVault.type === 'personal' ? 'Personal' : 'Organization'}`
-                  : "Select vault..."}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                <span className="truncate">
+                  {selectedVault
+                    ? `${selectedVault.name}${selectedVault.org_name ? ` (${selectedVault.org_name})` : ''}`
+                    : "Select vault..."}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-gray-500" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-full p-0 bg-gray-800 border-gray-700">
-              <Command className="bg-gray-800 w-full">
-                <CommandInput placeholder="Search vault..." className="text-white" />
-                <CommandEmpty className="text-gray-400 py-6 text-center text-sm">No vault found.</CommandEmpty>
+            <PopoverContent className="w-full p-0 bg-white border-gray-200 shadow-lg" align="start">
+              <Command className="bg-white">
+                <CommandInput 
+                  placeholder="Search vault..." 
+                  className="text-gray-900 border-gray-200"
+                />
+                <CommandEmpty className="text-gray-500 py-6 text-center text-sm">
+                  No vault found.
+                </CommandEmpty>
                 <CommandGroup className="max-h-64 overflow-auto">
                   {vaults.map((vault) => (
                     <CommandItem
                       key={vault.id}
                       value={`${vault.name} ${vault.org_name || ''} ${vault.type}`}
                       onSelect={() => handleVaultChange(vault.id)}
-                      className="text-white hover:bg-gray-700/50 cursor-pointer"
+                      className="text-gray-900 hover:bg-gray-100 cursor-pointer py-3"
                     >
                       <Check
                         className={cn(
-                          "mr-2 h-4 w-4",
+                          "mr-2 h-4 w-4 text-blue-600",
                           selectedVaultId === vault.id ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{vault.name}</span>
-                        <span className="text-xs text-gray-400">
-                          {vault.org_name ? `${vault.org_name} - ` : ''}{vault.type === 'personal' ? 'Personal' : 'Organization'}
-                        </span>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="font-semibold text-gray-900 truncate">{vault.name}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {vault.org_name && (
+                            <span className="text-xs text-gray-500">{vault.org_name}</span>
+                          )}
+                          <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                            vault.type === 'personal' 
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'bg-purple-50 text-purple-700'
+                          }`}>
+                            {vault.type === 'personal' ? 'Personal' : 'Organization'}
+                          </span>
+                        </div>
                       </div>
                     </CommandItem>
                   ))}
@@ -201,44 +221,71 @@ export const VaultNameEditor: React.FC = () => {
           </Popover>
         </div>
 
-        <div className="flex items-center gap-3">
-          {isEditing ? (
-            <div className="flex-1 flex items-center gap-3">
+        {isEditing ? (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Vault Name
+              </label>
               <input
                 type="text"
                 value={vaultName}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVaultName(e.target.value)}
-                className="flex-1 px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="Enter vault name..."
                 maxLength={50}
                 disabled={loading}
                 autoFocus
               />
+              <p className="text-xs text-gray-500 mt-1.5">
+                {vaultName.length}/50 characters
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
               <button
                 onClick={handleSave}
-                disabled={loading || !vaultName.trim()}
-                className="px-4 py-3 bg-blue-600/90 hover:bg-blue-700/90 disabled:bg-gray-600/50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+                disabled={loading || !vaultName.trim() || vaultName.trim() === selectedVault?.name}
+                className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-semibold flex items-center justify-center gap-2 shadow-sm"
               >
                 {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
                 ) : (
-                  <Save className="w-4 h-4" />
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Changes</span>
+                  </>
                 )}
-                Save
               </button>
               <button
                 onClick={handleCancel}
                 disabled={loading}
-                className="px-4 py-3 bg-gray-600/50 hover:bg-gray-700/50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                className="px-4 py-2.5 bg-white hover:bg-gray-50 border border-gray-300 disabled:cursor-not-allowed text-gray-700 rounded-lg transition-colors font-semibold flex items-center gap-2"
               >
                 <X className="w-4 h-4" />
+                <span>Cancel</span>
               </button>
             </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-between">
-              <div>
-                <p className="text-lg font-medium text-white">{selectedVault?.name} Organization</p>
-                <p className="text-sm text-gray-400">
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-base font-semibold text-gray-900 truncate">
+                    {selectedVault?.name}
+                  </p>
+                  <span className={`text-xs px-2 py-1 rounded font-bold uppercase tracking-wide border-2 flex-shrink-0 ${
+                    selectedVault?.type === 'personal' 
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : 'bg-purple-50 text-purple-700 border-purple-200'
+                  }`}>
+                    {selectedVault?.type === 'personal' ? 'Personal' : 'Organization'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">
                   {selectedVault?.can_edit 
                     ? 'Click edit to change your vault name' 
                     : 'You do not have permission to edit this vault'}
@@ -247,14 +294,14 @@ export const VaultNameEditor: React.FC = () => {
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={!selectedVault?.can_edit}
-                className="px-4 py-2 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-lg transition-colors flex items-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 shadow-sm"
               >
                 <Edit className="w-4 h-4" />
-                Edit
+                <span>Edit</span>
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

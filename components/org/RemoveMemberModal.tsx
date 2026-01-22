@@ -1,11 +1,12 @@
 import React from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import axios from "axios";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FormError } from "../auth/form-error";
@@ -121,48 +122,61 @@ export const RemoveMemberModal: React.FC<RemoveMemberModalProps> = ({
       open={showRemoveMemberModal}
       onOpenChange={handleClose}
     >
-      <DialogContent className="sm:max-w-md bg-gray-900 border-gray-700 text-white">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2.5">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-            Remove Member
-          </DialogTitle>
+      <DialogContent className="sm:max-w-md bg-white border-gray-200 shadow-xl p-0 overflow-hidden gap-0 rounded-2xl">
+        <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-red-50 rounded-xl border border-red-100">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold text-gray-900">
+                Remove Member
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-500 mt-0.5">
+                Revoke access to the organization.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {selectedMember && orgName && (
-            <div className="p-4 bg-red-900/20 border border-red-700/30 rounded-lg">
-              <p className="text-sm font-semibold text-white mb-2">
-                Are you sure you want to remove <strong>{memberName}</strong> from{" "}
-                <strong>{orgName}</strong>?
-              </p>
-              <p className="text-xs text-red-300">
-                This action cannot be undone. They will lose access to all
-                resources in this organization.
-              </p>
+        <div className="p-6 space-y-5">
+          {selectedMember && (
+            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+              <div className="mt-0.5">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-red-900">
+                  Remove {memberName}?
+                </p>
+                <p className="text-xs text-red-700 leading-relaxed">
+                  Are you sure you want to remove this user from <span className="font-semibold">{orgName || 'the organization'}</span>? 
+                  They will immediately lose access to all vaults and resources.
+                </p>
+              </div>
             </div>
           )}
 
           <FormError message={error} />
           <FormSuccess message={success} />
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
               onClick={handleClose}
-              className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+              className="flex-1 h-11 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl font-medium"
               disabled={isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={handleRemoveMember}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow-sm hover:shadow-md transition-all"
               disabled={isPending || !selectedMember}
             >
               {isPending ? (
                 <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Removing...
                 </div>
               ) : (

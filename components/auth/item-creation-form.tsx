@@ -37,7 +37,7 @@ import { TagsInput } from "../item/TagsInput";
 import { ItemCreationFormProps } from "../item/types";
 import { useTags } from "../item/hooks";
 import { useTOTP } from "../item/hooks";
-import { Lock, Plus, RefreshCw } from "lucide-react";
+import { Lock, Plus, RefreshCw, KeyRound, Type } from "lucide-react";
 
 interface TagsHookReturn {
   tagInput: string;
@@ -217,16 +217,21 @@ function ItemCreationForm({
     <div className="flex flex-col h-full max-h-[65vh]">
       <FormHeader effectiveVaultType={effectiveVaultType} />
 
-      <div className="flex-1 overflow-y-auto pr-2 minimal-scrollbar">
-        <div className="space-y-4 sm:space-y-6">
+      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-6 pb-2">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              
+              {/* Master Passphrase Section */}
               <FormField
                 control={form.control}
                 name="mnemonic"
                 render={() => (
                   <FormItem>
-                    <FormLabel className="text-white">Master Passphrase</FormLabel>
+                    <FormLabel className="text-gray-700 font-semibold text-sm flex items-center gap-2">
+                      <KeyRound className="w-4 h-4 text-gray-400" />
+                      Master Passphrase
+                    </FormLabel>
                     <FormControl>
                       <Textarea
                         value={mnemonic}
@@ -235,9 +240,9 @@ function ItemCreationForm({
                           setMnemonic(value);
                           form.setValue("mnemonic", value);
                         }}
-                        placeholder="Your 24 word master passphrase"
+                        placeholder="Enter your 24-word master passphrase to unlock encryption..."
                         rows={3}
-                        className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 font-mono text-sm resize-none"
+                        className="bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-mono text-sm resize-none rounded-xl shadow-sm transition-all"
                       />
                     </FormControl>
                     <FormMessage />
@@ -251,18 +256,22 @@ function ItemCreationForm({
                 ovkCryptoKey={ovkCryptoKey}
               />
 
+              {/* Item Name Section */}
               <FormField
                 control={form.control}
                 name="item_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-white">Item Name</FormLabel>
+                    <FormLabel className="text-gray-700 font-semibold text-sm flex items-center gap-2">
+                      <Type className="w-4 h-4 text-gray-400" />
+                      Item Name
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="text"
-                        placeholder="e.g., GitHub Account, Bank 2FA + Recovery, Server Access Notes"
-                        className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500"
+                        placeholder="e.g., Personal GitHub, Chase Bank, AWS Root"
+                        className="h-11 bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all shadow-sm"
                       />
                     </FormControl>
                     <FormMessage />
@@ -276,7 +285,7 @@ function ItemCreationForm({
               />
 
               {selectedTypes.length > 0 && (
-                <>
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
                   <ItemFieldsSection
                     selectedTypes={selectedTypes}
                     totpProps={{
@@ -298,7 +307,7 @@ function ItemCreationForm({
                     onAddTag={tags.addTag}
                     onRemoveTag={tags.removeTag}
                   />
-                </>
+                </div>
               )}
 
               <div className="w-full">
@@ -310,13 +319,13 @@ function ItemCreationForm({
         </div>
       </div>
 
-      <div className="flex-shrink-0 pt-4 border-t border-gray-700/50 mt-4 flex gap-2">
+      <div className="shrink-0 pt-5 border-t border-gray-100 mt-4 flex gap-3 bg-white z-10">
         {onCancel && (
           <Button
             type="button"
             onClick={onCancel}
             variant="outline"
-            className="flex-1 bg-gray-800 border-gray-700 hover:bg-gray-700 text-white h-10 sm:h-11 text-sm sm:text-base"
+            className="flex-1 bg-white border-gray-200 hover:bg-gray-50 text-gray-700 font-medium h-11 text-sm rounded-xl shadow-sm transition-all"
             disabled={isPending}
           >
             Cancel
@@ -325,30 +334,30 @@ function ItemCreationForm({
         <Button
           type="submit"
           onClick={form.handleSubmit(onSubmit)}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed h-10 sm:h-11 text-sm sm:text-base"
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 text-sm rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           disabled={isPending || !ovkCryptoKey || selectedTypes.length === 0 || !mnemonic.trim()}
         >
           {isPending ? (
             <>
               <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              Creating...
+              Processing...
             </>
           ) : !mnemonic.trim() ? (
             <>
               <Lock className="w-4 h-4 mr-2" />
-              Enter Passphrase
+              Unlock to Create
             </>
           ) : !ovkCryptoKey ? (
             <>
               <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              Loading Key...
+              Syncing Keys...
             </>
           ) : selectedTypes.length === 0 ? (
-            "Select Item Type"
+            "Select Type to Continue"
           ) : (
             <>
               <Plus className="w-4 h-4 mr-2" />
-              Add Item
+              Create Secure Item
             </>
           )}
         </Button>

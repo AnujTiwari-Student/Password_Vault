@@ -1,11 +1,12 @@
 import React from "react";
-import { Crown } from "lucide-react";
+import { Crown, Loader2, ShieldCheck } from "lucide-react";
 import axios from "axios";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -96,60 +97,88 @@ export const RoleChangeModal: React.FC<RoleChangeModalProps> = ({
     });
   };
 
+  const handleClose = () => {
+    setShowRoleModal(false);
+    setSelectedMember(null);
+    setNewRole("");
+    setError(null);
+    setSuccess(null);
+  };
+
   return (
-    <Dialog open={showRoleModal} onOpenChange={setShowRoleModal}>
-      <DialogContent className="sm:max-w-md bg-gray-900 border-gray-700 text-white">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2.5">
-            <Crown className="w-5 h-5 text-yellow-400" />
-            Change Member Role
-          </DialogTitle>
+    <Dialog open={showRoleModal} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md bg-white border-gray-200 shadow-xl p-0 overflow-hidden gap-0 rounded-2xl">
+        <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-100">
+              <Crown className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold text-gray-900">
+                Change Member Role
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-500 mt-0.5">
+                Update access permissions for this user.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="p-6 space-y-6">
           {selectedMember && (
-            <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-              <p className="text-sm font-semibold text-white">
-                {selectedMember.user?.name || "Unknown User"}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                {selectedMember.user?.email || "No email"}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Current role:{" "}
-                <span className="text-white font-medium">
-                  {selectedMember.role}
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-gray-900">
+                  {selectedMember.user?.name || "Unknown User"}
+                </p>
+                <span className="text-xs font-medium px-2 py-0.5 rounded bg-gray-200 text-gray-600 uppercase tracking-wide">
+                  Current: {selectedMember.role}
                 </span>
+              </div>
+              <p className="text-xs text-gray-500">
+                {selectedMember.user?.email || "No email"}
               </p>
             </div>
           )}
 
-          <div>
-            <label className="text-sm font-medium text-gray-300 mb-2 block">
-              New Role
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+              Select New Role
             </label>
             <Select value={newRole} onValueChange={setNewRole}>
-              <SelectTrigger className="bg-gray-800 border-gray-700 focus:border-blue-500 text-white">
-                <SelectValue placeholder="Select new role" />
+              <SelectTrigger className="h-11 bg-white border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl shadow-sm transition-all">
+                <SelectValue placeholder="Select role permission" />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectContent className="bg-white border-gray-200 shadow-xl rounded-xl">
                 <SelectItem
                   value="admin"
-                  className="text-white hover:bg-gray-700"
+                  className="text-gray-900 hover:bg-gray-50 cursor-pointer py-2.5 rounded-lg mb-1"
                 >
-                  Admin - Can manage organization
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium flex items-center gap-2">
+                      Admin
+                      <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+                    </span>
+                    <span className="text-[10px] text-gray-500">Full management access</span>
+                  </div>
                 </SelectItem>
                 <SelectItem
                   value="member"
-                  className="text-white hover:bg-gray-700"
+                  className="text-gray-900 hover:bg-gray-50 cursor-pointer py-2.5 rounded-lg mb-1"
                 >
-                  Member - Can access resources
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">Member</span>
+                    <span className="text-[10px] text-gray-500">Standard resource access</span>
+                  </div>
                 </SelectItem>
                 <SelectItem
                   value="viewer"
-                  className="text-white hover:bg-gray-700"
+                  className="text-gray-900 hover:bg-gray-50 cursor-pointer py-2.5 rounded-lg"
                 >
-                  Viewer - Read-only access
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">Viewer</span>
+                    <span className="text-[10px] text-gray-500">Read-only permissions</span>
+                  </div>
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -158,29 +187,23 @@ export const RoleChangeModal: React.FC<RoleChangeModalProps> = ({
           <FormError message={error} />
           <FormSuccess message={success} />
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
-              onClick={() => {
-                setShowRoleModal(false);
-                setSelectedMember(null);
-                setNewRole("");
-                setError(null);
-                setSuccess(null);
-              }}
-              className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+              onClick={handleClose}
+              className="flex-1 h-11 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl font-medium"
               disabled={isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={handleRoleChange}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-sm hover:shadow-md transition-all"
               disabled={isPending || !newRole}
             >
               {isPending ? (
                 <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Updating...
                 </div>
               ) : (

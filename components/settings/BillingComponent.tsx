@@ -87,27 +87,29 @@ export const BillingComponent: React.FC<BillingComponentProps> = ({ user }) => {
 
   if (isLoadingBilling) {
     return (
-      <div className="bg-gray-800 rounded-xl p-12 border border-gray-700">
-        <div className="flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-          <span className="ml-3 text-gray-400">Loading billing information...</span>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="text-gray-600 font-medium">Loading billing information...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2.5 bg-blue-500/10 rounded-lg">
-            <Package size={24} className="text-blue-400" />
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center border border-blue-100">
+            <Package size={20} className="text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold text-white">Billing & Plans</h2>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Billing & Plans</h2>
+            <p className="text-sm text-gray-600 mt-0.5">
+              Manage your subscription and upgrade your plan
+            </p>
+          </div>
         </div>
-        <p className="text-gray-400 text-sm ml-14">
-          Manage your subscription and upgrade your plan
-        </p>
       </div>
 
       <CurrentPlanCard

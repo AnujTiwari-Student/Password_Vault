@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield } from 'lucide-react';
+import { Shield, Lock } from 'lucide-react';
 
 interface UnlockPromptProps {
   onUnlock: () => void;
@@ -11,26 +11,27 @@ export const UnlockPrompt: React.FC<UnlockPromptProps> = ({
   isDecrypting,
 }) => {
   return (
-    <div className="bg-blue-950/30 border border-blue-800/50 rounded-lg p-6">
+    <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 shadow-sm">
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0">
-          <div className="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center">
-            <Shield className="w-5 h-5 text-blue-400" />
+        <div className="shrink-0">
+          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center border border-blue-200">
+            <Shield className="w-5 h-5 text-blue-600" />
           </div>
         </div>
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold text-white mb-1">
-            Item Locked
+        <div className="flex-1 pt-0.5">
+          <h3 className="text-sm font-bold text-blue-900 mb-1">
+            Encrypted Content Locked
           </h3>
-          <p className="text-sm text-gray-300 mb-3">
-            Enter your master passphrase to decrypt and view this item
+          <p className="text-sm text-blue-700 mb-4 leading-relaxed">
+            This item contains sensitive data encrypted with your master key. Please unlock to view details.
           </p>
           <button
             onClick={onUnlock}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
             disabled={isDecrypting}
           >
-            Unlock Item
+            <Lock className="w-4 h-4" />
+            {isDecrypting ? 'Decrypting...' : 'Unlock Item'}
           </button>
         </div>
       </div>

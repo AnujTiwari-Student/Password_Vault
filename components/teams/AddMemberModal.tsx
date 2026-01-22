@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { UserPlus, Mail, Building2, AlertCircle } from "lucide-react";
+import { UserPlus, Mail, Building2, AlertCircle, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -118,12 +118,6 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     setSuccess(null);
 
     try {
-      console.log("Sending invitation:", {
-        org_id: data.org_id,
-        email: data.email.trim(),
-        role: data.role,
-      });
-
       response = await axios.post<APIResponse<InviteResponse>>("/api/invites", {
         org_id: data.org_id,
         email: data.email.trim(),
@@ -200,216 +194,224 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md bg-gray-900/95 border-gray-700/50 text-white">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
-            <UserPlus className="w-5 h-5 text-gray-400" />
-            Add Member to Organization
-          </DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Invite a new member to join your organization
-          </DialogDescription>
+      <DialogContent className="sm:max-w-md bg-white border-gray-200 shadow-xl p-0 overflow-hidden gap-0 rounded-2xl">
+        <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-50 rounded-xl border border-blue-100">
+              <UserPlus className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold text-gray-900">
+                Add New Member
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-500 mt-0.5">
+                Invite someone to collaborate in your organization.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-4"
-          >
-            <div className="space-y-4">
-              {/* Organization Selector */}
-              <FormField
-                control={form.control}
-                name="org_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[#bfbfbf]">
-                      Organization *
-                    </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={isPending || loadingOrgs}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="text-white bg-gray-800/50 border-gray-700/50 focus:border-gray-600">
-                          {loadingOrgs ? (
-                            <span className="text-gray-400">Loading organizations...</span>
+        <div className="p-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
+              <div className="space-y-4">
+                {/* Organization Selector */}
+                <FormField
+                  control={form.control}
+                  name="org_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Organization <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={isPending || loadingOrgs}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-11 bg-white border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl">
+                            {loadingOrgs ? (
+                              <span className="text-gray-400 flex items-center gap-2">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Loading...
+                              </span>
+                            ) : (
+                              <SelectValue placeholder="Select organization" />
+                            )}
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-white border-gray-200 shadow-lg rounded-xl">
+                          {organizations.length === 0 ? (
+                            <div className="p-3 text-center text-gray-500 text-sm">
+                              No organizations found where you are owner/admin
+                            </div>
                           ) : (
-                            <SelectValue placeholder="Select organization" />
-                          )}
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        {organizations.length === 0 ? (
-                          <div className="p-2 text-center text-gray-400 text-sm">
-                            No organizations found where you are owner/admin
-                          </div>
-                        ) : (
-                          organizations.map((org) => (
-                            <SelectItem
-                              key={org.id}
-                              value={org.id}
-                              className="text-white hover:bg-gray-700"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-blue-400" />
-                                <div className="flex flex-col items-start">
-                                  <span>{org.name}</span>
-                                  <span className="text-xs text-gray-400 capitalize">
-                                    Your role: {org.role}
-                                  </span>
+                            organizations.map((org) => (
+                              <SelectItem
+                                key={org.id}
+                                value={org.id}
+                                className="text-gray-900 hover:bg-gray-50 cursor-pointer py-2.5"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="p-1.5 bg-blue-50 rounded-lg">
+                                    <Building2 className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                  <div className="flex flex-col items-start">
+                                    <span className="font-medium text-sm">{org.name}</span>
+                                    <span className="text-[10px] text-gray-500 capitalize">
+                                      Role: {org.role}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Email Input */}
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[#bfbfbf]">
-                      Email Address *
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <Input
-                          {...field}
-                          type="email"
-                          placeholder="member@example.com"
-                          className="pl-10 text-white bg-gray-800/50 border-gray-700/50 focus:border-gray-600"
-                          disabled={isPending}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Role Selector */}
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[#bfbfbf]">Role</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={isPending}
-                    >
+                {/* Email Input */}
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Email Address <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
-                        <SelectTrigger className="text-white bg-gray-800/50 border-gray-700/50 focus:border-gray-600">
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
+                        <div className="relative">
+                          <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Input
+                            {...field}
+                            type="email"
+                            placeholder="colleague@company.com"
+                            className="h-11 pl-10 bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl"
+                            disabled={isPending}
+                          />
+                        </div>
                       </FormControl>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        <SelectItem
-                          value="member"
-                          className="text-white hover:bg-gray-700"
-                        >
-                          <div className="flex flex-col items-start">
-                            <span>Member</span>
-                            <span className="text-xs text-gray-400">
-                              Can view and use resources
-                            </span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem
-                          value="admin"
-                          className="text-white hover:bg-gray-700"
-                        >
-                          <div className="flex flex-col items-start">
-                            <span>Admin</span>
-                            <span className="text-xs text-gray-400">
-                              Can manage and invite members
-                            </span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem
-                          value="viewer"
-                          className="text-white hover:bg-gray-700"
-                        >
-                          <div className="flex flex-col items-start">
-                            <span>Viewer</span>
-                            <span className="text-xs text-gray-400">
-                              Can only view resources
-                            </span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Info Box */}
-            <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700/30">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-gray-400">
+                {/* Role Selector */}
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Role Permission
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={isPending}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-11 bg-white border-gray-200 text-gray-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all rounded-xl">
+                            <SelectValue placeholder="Select a role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-white border-gray-200 shadow-lg rounded-xl p-1">
+                          <SelectItem
+                            value="member"
+                            className="text-gray-900 hover:bg-gray-50 cursor-pointer rounded-lg mb-1"
+                          >
+                            <div className="flex flex-col items-start py-1">
+                              <span className="font-medium text-sm">Member</span>
+                              <span className="text-[10px] text-gray-500">
+                                Can view and use resources
+                              </span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="admin"
+                            className="text-gray-900 hover:bg-gray-50 cursor-pointer rounded-lg mb-1"
+                          >
+                            <div className="flex flex-col items-start py-1">
+                              <span className="font-medium text-sm">Admin</span>
+                              <span className="text-[10px] text-gray-500">
+                                Can manage and invite members
+                              </span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem
+                            value="viewer"
+                            className="text-gray-900 hover:bg-gray-50 cursor-pointer rounded-lg"
+                          >
+                            <div className="flex flex-col items-start py-1">
+                              <span className="font-medium text-sm">Viewer</span>
+                              <span className="text-[10px] text-gray-500">
+                                Read-only access to resources
+                              </span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                <div className="text-xs text-blue-700 leading-relaxed">
                   {selectedOrgName ? (
                     <p>
-                      An invitation will be sent to join{" "}
-                      <strong className="text-white">{selectedOrgName}</strong>.
-                      They will need to accept the invitation to join.
+                      Invitation will be sent to join <strong className="font-semibold">{selectedOrgName}</strong>. 
+                      They will receive an email to accept the invitation.
                     </p>
                   ) : (
                     <p>
-                      Select an organization and enter the members email address
-                      to send an invitation.
+                      Select an organization first to see where the invitation will be sent.
                     </p>
                   )}
                 </div>
               </div>
-            </div>
 
-            <FormError message={error} />
-            <FormSuccess message={success} />
+              <FormError message={error} />
+              <FormSuccess message={success} />
 
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                className="flex-1 bg-gray-700/50 border-gray-600/50 text-white hover:bg-gray-600/50"
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1 bg-blue-600/90 hover:bg-blue-600 text-white"
-                disabled={isPending || organizations.length === 0}
-              >
-                {isPending ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    Sending...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <UserPlus className="w-4 h-4" />
-                    Send Invitation
-                  </div>
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  className="flex-1 h-11 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl font-medium"
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-sm hover:shadow-md transition-all"
+                  disabled={isPending || organizations.length === 0}
+                >
+                  {isPending ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-4 h-4" />
+                      Send Invitation
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );

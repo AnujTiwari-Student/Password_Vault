@@ -1,6 +1,6 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
-import { APIVaultItem, DecryptedItemData } from '@/types/vault';
+import { APIVaultItem, DecryptedData } from '@/types/vault';
 import { ItemField } from './ItemField';
 import { UnlockPrompt } from './UnlockPrompt';
 
@@ -9,7 +9,7 @@ interface ItemContentProps {
   showPassword: boolean;
   showTotp: boolean;
   masterPassphrase: string | null;
-  decryptedData: DecryptedItemData | null;
+  decryptedData: DecryptedData | null;
   isCurrentlyDecrypting: boolean;
   isPending: boolean;
   onTogglePassword: () => void;
@@ -34,7 +34,7 @@ export const ItemContent: React.FC<ItemContentProps> = ({
   onUnlockItem,
 }) => {
   return (
-    <div className="space-y-4 py-4">
+    <div className="space-y-5 py-2">
       {!masterPassphrase && (
         <UnlockPrompt
           onUnlock={onUnlockItem}
@@ -43,9 +43,9 @@ export const ItemContent: React.FC<ItemContentProps> = ({
       )}
 
       {isCurrentlyDecrypting && (
-        <div className="flex items-center gap-2 text-blue-400 bg-blue-950/30 px-4 py-3 rounded-lg border border-blue-800/50">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-sm">Decrypting item data...</span>
+        <div className="flex items-center gap-3 text-blue-700 bg-blue-50 px-4 py-3 rounded-xl border border-blue-100 shadow-sm animate-in fade-in zoom-in-95">
+          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+          <span className="text-sm font-medium">Decrypting item data...</span>
         </div>
       )}
 
@@ -54,7 +54,7 @@ export const ItemContent: React.FC<ItemContentProps> = ({
         value={item.type.map((type, idx) => (
           <span
             key={idx}
-            className="px-3 py-1 bg-gray-700 border border-gray-600 rounded-lg text-sm"
+            className="px-2.5 py-1 bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 uppercase tracking-wide"
           >
             {type.charAt(0).toUpperCase() + type.slice(1)}
           </span>
@@ -130,17 +130,17 @@ export const ItemContent: React.FC<ItemContentProps> = ({
           value={item.tags.map((tag, idx) => (
             <span
               key={idx}
-              className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-300"
+              className="px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-600"
             >
-              {tag}
+              #{tag}
             </span>
           ))}
           isArray
         />
       )}
 
-      <div className="pt-4 border-t border-gray-700">
-        <p className="text-xs text-gray-500">
+      <div className="pt-5 mt-2 border-t border-gray-100">
+        <p className="text-xs text-gray-400 font-medium">
           Last updated: {new Date(item.updated_at).toLocaleString()}
         </p>
       </div>

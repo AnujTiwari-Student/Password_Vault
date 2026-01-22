@@ -9,7 +9,7 @@ import {
   Key,
   Activity,
   Copy,
-  Check
+  Check,
 } from "lucide-react";
 import Image from "next/image";
 import axios from "axios";
@@ -100,23 +100,28 @@ export const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "owner":
-        return "bg-yellow-900/30 text-yellow-300 border-yellow-700/30";
+        return "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100";
       case "admin":
-        return "bg-blue-900/30 text-blue-300 border-blue-700/30";
+        return "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100";
       case "member":
-        return "bg-green-900/30 text-green-300 border-green-700/30";
+        return "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
       case "viewer":
-        return "bg-gray-700/50 text-gray-400 border-gray-600/30";
+        return "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200";
       default:
-        return "bg-gray-700/50 text-gray-400";
+        return "bg-gray-50 text-gray-600 border-gray-200";
     }
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -139,126 +144,136 @@ export const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl bg-gray-900 border-gray-700 text-white max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <User className="w-5 h-5 text-blue-400" />
+      <DialogContent className="w-full sm:max-w-2xl bg-white border-gray-200 shadow-xl max-h-[85vh] overflow-y-auto p-0 gap-0 scrollbar-hide rounded-2xl mx-auto sm:mx-0"> {/* Added responsive width classes */}
+        <DialogHeader className="p-4 sm:p-6 pb-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 rounded-xl border border-blue-100">
+                <User className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <h2 className="text-lg font-bold text-gray-900">Member Details</h2>
+                <p className="text-sm font-normal text-gray-500">View profile and activity logs</p>
+              </div>
             </div>
-            Member Details
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <div className="flex items-start gap-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700/50">
+        <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 scrollbar-hide"> {/* Adjusted padding and spacing for mobile */}
+          {/* Profile Header Card */}
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5 p-4 sm:p-5 bg-gray-50 rounded-2xl border border-gray-200/60"> {/* Responsive flex direction and gap */}
             {member.user?.image ? (
               <Image
                 src={member.user.image}
                 alt={member.user?.name || "User"}
-                width={64}
-                height={64}
-                className="w-16 h-16 rounded-full ring-2 ring-blue-500/20"
+                width={72}
+                height={72}
+                className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-2xl object-cover border-2 border-white shadow-sm" 
               />
             ) : (
-              <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center ring-2 ring-blue-500/20">
-                <User className="w-8 h-8 text-gray-400" />
+              <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] bg-white rounded-2xl flex items-center justify-center border-2 border-gray-100 shadow-sm text-gray-400">
+                <User className="w-8 h-8" />
               </div>
             )}
             
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-semibold text-white">
-                  {member.user?.name || "Unknown User"}
-                </h3>
-                <Badge className={`${getRoleBadgeColor(member.role)} border`}>
-                  {member.role}
-                </Badge>
+            <div className="flex-1 min-w-0 pt-1 w-full sm:w-auto"> {/* Added w-full for mobile */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-col w-full"> {/* Added w-full */}
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate"> {/* Adjusted font size */}
+                    {member.user?.name || "Unknown User"}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 mt-1"> {/* Allow wrapping for badges */}
+                    <Badge className={`${getRoleBadgeColor(member.role)} px-2.5 py-0.5 text-xs font-semibold capitalize border shadow-none`}>
+                      {member.role}
+                    </Badge>
+                    <span className="text-gray-300 hidden sm:inline">|</span> {/* Hide separator on small screens if needed */}
+                    <span className="text-xs text-gray-500 font-medium flex items-center gap-1.5 w-full sm:w-auto mt-1 sm:mt-0"> {/* Allow full width on mobile */}
+                      <Calendar className="w-3.5 h-3.5" />
+                      {/* @ts-expect-error `created_at` is a string */}
+                      Joined {formatDate(member.created_at)}
+                    </span>
+                  </div>
+                </div>
               </div>
               
               {orgName && (
-                <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                  <Building2 className="w-4 h-4" />
-                  <span>{orgName}</span>
+                <div className="flex items-center gap-1.5 text-sm text-gray-600 mt-3 bg-white px-3 py-1.5 rounded-lg border border-gray-200 w-fit shadow-sm">
+                  <Building2 className="w-4 h-4 text-gray-400" />
+                  <span className="font-medium truncate max-w-[200px] sm:max-w-none">{orgName}</span> {/* Truncate org name on mobile */}
                 </div>
               )}
-
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <Calendar className="w-4 h-4" />
-                {/* @ts-expect-error `created_at` is a string */}
-                <span>Joined {formatDate(member.created_at)}</span>
-              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/30">
+          {/* Quick Info Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 scrollbar-hide">
+            <div className="group relative p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-gray-400">
+                <div className="flex items-center gap-2 text-gray-500">
                   <Mail className="w-4 h-4" />
-                  <span className="text-xs font-medium">Email</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider">Email Address</span>
                 </div>
                 <button
                   onClick={() => copyToClipboard(member.user?.email || '', 'Email')}
-                  className="p-1 hover:bg-gray-700/50 rounded transition-colors"
+                  className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   {copiedField === 'Email' ? (
-                    <Check className="w-3 h-3 text-green-400" />
+                    <Check className="w-3.5 h-3.5 text-green-600" />
                   ) : (
-                    <Copy className="w-3 h-3 text-gray-500" />
+                    <Copy className="w-3.5 h-3.5" />
                   )}
                 </button>
               </div>
-              <p className="text-sm text-white font-medium break-all">
-                {member.user?.email || "No email"}
+              <p className="text-sm text-gray-900 font-medium truncate select-all">
+                {member.user?.email || "No email provided"}
               </p>
             </div>
 
-            <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/30">
-              <div className="flex items-center gap-2 text-gray-400 mb-2">
+            <div className="p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 text-gray-500 mb-2">
                 <Key className="w-4 h-4" />
-                <span className="text-xs font-medium">Member ID</span>
+                <span className="text-xs font-semibold uppercase tracking-wider">Membership ID</span>
               </div>
-              <p className="text-sm text-white font-mono">
-                {member.id.substring(0, 12)}...
+              <p className="text-sm text-gray-600 font-mono bg-gray-50 px-2 py-0.5 rounded-md inline-block border border-gray-100 break-all"> {/* Break long ID on mobile */}
+                {member.id}
               </p>
             </div>
           </div>
 
           {loading ? (
             <div className="space-y-4">
-              <Skeleton className="h-20 bg-gray-800" />
-              <Skeleton className="h-32 bg-gray-800" />
+              <Skeleton className="h-24 w-full bg-gray-100 rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full bg-gray-100 rounded-lg" />
+                <Skeleton className="h-12 w-full bg-gray-100 rounded-lg" />
+              </div>
             </div>
           ) : (
             <>
               {stats && (
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-4 bg-gradient-to-br from-blue-900/20 to-blue-800/10 rounded-lg border border-blue-700/30">
-                    <div className="flex items-center gap-2 text-blue-400 mb-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4"> {/* Stack stats on mobile */}
+                  <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex flex-col items-center text-center">
+                    <div className="p-2 bg-blue-100 rounded-full text-blue-600 mb-2">
                       <Activity className="w-4 h-4" />
-                      <span className="text-xs font-medium">Total Logins</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">
-                      {stats.totalLogins}
-                    </p>
+                    <p className="text-xs text-blue-600 font-semibold uppercase tracking-wider mb-1">Total Logins</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalLogins}</p>
                   </div>
 
-                  <div className="p-4 bg-gradient-to-br from-green-900/20 to-green-800/10 rounded-lg border border-green-700/30">
-                    <div className="flex items-center gap-2 text-green-400 mb-1">
+                  <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 flex flex-col items-center text-center">
+                    <div className="p-2 bg-emerald-100 rounded-full text-emerald-600 mb-2">
                       <Shield className="w-4 h-4" />
-                      <span className="text-xs font-medium">Items Accessed</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">
-                      {stats.itemsAccessed}
-                    </p>
+                    <p className="text-xs text-emerald-600 font-semibold uppercase tracking-wider mb-1">Items Accessed</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.itemsAccessed}</p>
                   </div>
 
-                  <div className="p-4 bg-gradient-to-br from-purple-900/20 to-purple-800/10 rounded-lg border border-purple-700/30">
-                    <div className="flex items-center gap-2 text-purple-400 mb-1">
+                  <div className="p-4 bg-purple-50/50 rounded-xl border border-purple-100 flex flex-col items-center text-center">
+                    <div className="p-2 bg-purple-100 rounded-full text-purple-600 mb-2">
                       <Clock className="w-4 h-4" />
-                      <span className="text-xs font-medium">Last Login</span>
                     </div>
-                    <p className="text-xs font-semibold text-white mt-1">
+                    <p className="text-xs text-purple-600 font-semibold uppercase tracking-wider mb-1">Last Active</p>
+                    <p className="text-sm font-bold text-gray-900 mt-1">
                       {stats.lastLogin ? getRelativeTime(stats.lastLogin) : 'Never'}
                     </p>
                   </div>
@@ -266,58 +281,68 @@ export const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
               )}
 
               {stats?.invitedBy && (
-                <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/30">
-                  <h4 className="text-sm font-semibold text-gray-300 mb-2">
-                    Invited By
-                  </h4>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gray-700/50 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        {stats.invitedBy.name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {stats.invitedBy.email}
-                      </p>
-                    </div>
+                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-sm text-gray-400 flex-shrink-0"> {/* Prevent shrink */}
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0"> {/* Allow text truncation */}
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">Invited By</p>
+                    <p className="text-sm font-bold text-gray-900 truncate">{stats.invitedBy.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{stats.invitedBy.email}</p>
                   </div>
                 </div>
               )}
 
-              <Separator className="bg-gray-700/50" />
+              <Separator className="bg-gray-100" />
 
               <div>
-                <h4 className="text-sm font-semibold text-gray-300 mb-3">
-                  Recent Activity
-                </h4>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2 sm:gap-0"> {/* Stack header on mobile */}
+                  <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-gray-400" />
+                    Recent Activity
+                  </h4>
+                  <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-full">
+                    Last 30 Days
+                  </span>
+                </div>
+
                 {recentActivity.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-8">
-                    No recent activity
-                  </p>
+                  <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                    <p className="text-sm text-gray-500 font-medium">No recent activity recorded</p>
+                  </div>
                 ) : (
-                  <div className="space-y-2">
-                    {recentActivity.map((activity) => (
+                  <div className="space-y-0">
+                    {recentActivity.map((activity, index) => (
                       <div
                         key={activity.id}
-                        className="flex items-start gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/30 hover:border-gray-600/50 transition-colors"
+                        className={`group flex gap-4 p-4 hover:bg-gray-50 transition-colors ${
+                          index !== recentActivity.length - 1 ? 'border-b border-gray-100' : ''
+                        }`}
                       >
-                        <div className="p-1.5 bg-blue-500/10 rounded">
-                          <Activity className="w-3.5 h-3.5 text-blue-400" />
+                        <div className="flex flex-col items-center">
+                          <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 ring-4 ring-blue-50"></div>
+                          {index !== recentActivity.length - 1 && (
+                            <div className="w-0.5 h-full bg-gray-100 my-1 group-hover:bg-gray-200 transition-colors"></div>
+                          )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white font-medium">
+                        <div className="flex-1 min-w-0 pb-1">
+                          <p className="text-sm text-gray-900 font-medium break-words"> {/* Allow breaking long words */}
                             {activity.description}
                           </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-gray-500">
+                          <div className="flex flex-wrap items-center gap-3 mt-1.5"> {/* Allow wrapping */}
+                            <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
                               {formatDate(activity.timestamp)}
                             </span>
-                            <span className="text-xs text-gray-600">•</span>
-                            <span className="text-xs text-gray-500">
-                              {activity.ip}
+                            <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatTime(activity.timestamp)}
                             </span>
+                            {activity.ip && (
+                              <span className="text-[10px] text-gray-400 font-mono bg-gray-100 px-1.5 py-0.5 rounded truncate max-w-[100px] sm:max-w-none"> {/* Truncate IP on small screens */}
+                                {activity.ip}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
