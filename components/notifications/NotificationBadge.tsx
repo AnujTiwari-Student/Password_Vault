@@ -90,7 +90,7 @@ export const NotificationBadge: React.FC = () => {
 
   return (
     <>
-      <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="w-full mx-auto p-4 sm:p-6 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
         
         {/* New Consolidated Header */}
         <NotificationHeader 
