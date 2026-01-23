@@ -116,27 +116,9 @@ export function TeamSwitcher() {
     //  eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.org?.id, searchParams]);
 
-  const fetchVaultForOrg = useCallback(async (orgId: string) => {
-    try {
-      const response = await axios.get(`/api/org/${orgId}/vault`);
-      if (response.data.success && response.data.vault) {
-        return response.data.vault.id;
-      }
-    } catch (error) {
-      console.error("Failed to fetch org vault:", error);
-    }
-    return null;
-  }, []);
-
   useEffect(() => {
     const fetchCurrentPlan = async () => {
-      let vaultId = null;
-
-      if (activeOrg?.id) {
-        vaultId = await fetchVaultForOrg(activeOrg.id);
-      } else if (user?.vault?.id) {
-        vaultId = user.vault.id;
-      }
+      const vaultId = user?.vault?.id;
 
       if (!vaultId) {
         setCurrentPlan("free");
@@ -160,10 +142,11 @@ export function TeamSwitcher() {
       }
     };
 
-    fetchCurrentPlan();
-  }, [user?.vault?.id, activeOrg?.id, fetchVaultForOrg]);
+    if (user?.vault?.id) {
+      fetchCurrentPlan();
+    }
+  }, [user?.vault?.id]);
 
-  // Sync activeOrg with URL
   useEffect(() => {
     const orgIdFromUrl = searchParams.get("org");
     if (orgIdFromUrl && organizations.length > 0) {
@@ -400,7 +383,6 @@ export function TeamSwitcher() {
                 </DropdownMenuItem>
               ))}
 
-              {/* Only show Create Organization button when user has permission */}
               {canUserCreateOrg && (
                 <>
                   <DropdownMenuSeparator className="bg-gray-100 my-1" />

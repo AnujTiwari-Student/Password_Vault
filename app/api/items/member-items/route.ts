@@ -3,16 +3,6 @@ import { currentUser } from '@/lib/current-user';
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 
-type PlanType = 'basic' | 'professional' | 'enterprise' | 'free';
-const PLAN_LIMITS: Record<PlanType, number> = {
-  'free': 100,
-  'basic': 100,
-  'professional': 500,
-  'enterprise': 1000
-};
-
-console.log('🔐 [/api/items/member-items] Module loaded', PLAN_LIMITS);
-
 type ItemType = 'login' | 'note' | 'totp';
 
 export async function GET(req: NextRequest) {
@@ -27,8 +17,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = req.nextUrl;
     const vaultId = searchParams.get('vault_id');
     const orgId = searchParams.get('org_id');
-
-    console.log('🔐 [/api/items/member-items] Called:', { vaultId, orgId, userId: user.id });
 
     if (!vaultId || !orgId) {
       return NextResponse.json({ 
@@ -53,12 +41,6 @@ export async function GET(req: NextRequest) {
 
     const isOrgOwner = org?.owner_user_id === user.id;
 
-    console.log('👤 Access check:', { 
-      hasMembership: !!membership, 
-      isOrgOwner,
-      role: membership?.role || (isOrgOwner ? 'owner' : null)
-    });
-
     if (!membership && !isOrgOwner) {
       return NextResponse.json({ 
         message: 'You are not a member of this organization' 
@@ -72,8 +54,6 @@ export async function GET(req: NextRequest) {
         type: 'org'
       }
     });
-
-    console.log('🗄️ Vault check:', vault ? `Found (${vault.id})` : 'Not found');
 
     if (!vault) {
       return NextResponse.json({ 
@@ -137,8 +117,6 @@ export async function GET(req: NextRequest) {
       orderBy: { updated_at: 'desc' }
     });
 
-    console.log('✅ Items fetched:', items.length);
-
     return NextResponse.json({
       items,
       count: items.length,
@@ -156,7 +134,6 @@ export async function GET(req: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error("❌ Organization items list error:", error);
     return NextResponse.json({ 
       message: 'Internal Server Error',
       error: process.env.NODE_ENV === 'development' ? String(error) : undefined

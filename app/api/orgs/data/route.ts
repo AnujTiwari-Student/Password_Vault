@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/db';
 
+const PLAN_ORG_LIMITS = {
+  free: 2,
+  basic: 2,
+  professional: 5,
+  enterprise: 8,
+} as const;
+
+type PlanType = keyof typeof PLAN_ORG_LIMITS;
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -88,6 +97,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        plan_type: true,
+        _count: {
+          select: { orgs: true } 
+        }
+      }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const currentPlan = (user.plan_type || 'basic') as PlanType;
+    const currentOrgCount = user._count.orgs;
+    const orgLimit = PLAN_ORG_LIMITS[currentPlan] || PLAN_ORG_LIMITS.free;
+
+    if (currentOrgCount >= orgLimit) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Organization limit reached. Your ${currentPlan} plan allows ${orgLimit} organizations. Please upgrade your plan to create more.`,
+          code: 'PLAN_LIMIT_EXCEEDED', 
+          currentPlan,
+          limit: orgLimit
+        },
+        { status: 403 }
       );
     }
 

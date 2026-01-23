@@ -17,7 +17,8 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FormError } from "@/components/auth/form-error";
+// Replaced FormError with Shadcn Alert below
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FormSuccess } from "@/components/auth/form-success";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -37,7 +38,7 @@ import { TagsInput } from "../item/TagsInput";
 import { ItemCreationFormProps } from "../item/types";
 import { useTags } from "../item/hooks";
 import { useTOTP } from "../item/hooks";
-import { Lock, Plus, RefreshCw, KeyRound, Type } from "lucide-react";
+import { Lock, Plus, RefreshCw, KeyRound, Type, AlertCircle } from "lucide-react";
 
 interface TagsHookReturn {
   tagInput: string;
@@ -193,9 +194,11 @@ function ItemCreationForm({
           body: JSON.stringify(payload),
         });
 
+        const responseData = await response.json();
+
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to create item on server.");
+          // Captures "Plan limit exceeded..." or other specific API errors
+          throw new Error(responseData.message || "Failed to create item.");
         }
 
         setSuccess("Item created and encrypted successfully!");
@@ -310,8 +313,20 @@ function ItemCreationForm({
                 </div>
               )}
 
-              <div className="w-full">
-                <FormError message={error} />
+              <div className="w-full space-y-2">
+                {error && (
+                  <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-900 shadow-sm animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <div className="ml-2">
+                      <AlertTitle className="text-red-800 font-semibold tracking-tight text-sm">
+                        Creation Failed
+                      </AlertTitle>
+                      <AlertDescription className="text-red-700 mt-1 text-xs leading-relaxed font-medium">
+                        {error}
+                      </AlertDescription>
+                    </div>
+                  </Alert>
+                )}
                 <FormSuccess message={success} />
               </div>
             </form>

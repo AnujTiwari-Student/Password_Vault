@@ -1,12 +1,13 @@
 "use client"
 
+import React from "react";
 import { AccountTypeValidationSchema, AccountTypeValidationType } from "@/schema/zod-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./form";
 import { Input } from "./input";
-import React from "react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./select";
+import { Building2, User } from "lucide-react";
 
 interface AccountSetupFormProps {
     setOrgName: (name: string) => void;
@@ -42,24 +43,34 @@ function AccountTypeValidation({ setOrgName, setAccountType }: AccountSetupFormP
     return (
         <div className='w-full'>
             <Form {...form}>
-                <form className='space-y-4'>
-                    <div className='space-y-4'>
+                <form className='space-y-5'>
+                    <div className='space-y-5'>
                         <FormField
                             control={form.control}
                             name="accountType"
                             render={({ field }) => (
                                 <FormItem>
+                                    <FormLabel className="text-gray-700 font-medium">Account Type</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormLabel className="text-white">Account Type</FormLabel>
                                         <FormControl>
-                                            <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-full focus:border-blue-500">
+                                            <SelectTrigger className="bg-white border-gray-200 text-gray-900 h-11 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm">
                                                 <SelectValue placeholder="Select an account type" />
                                             </SelectTrigger>
                                         </FormControl>
-                                        <SelectContent className="bg-gray-800 border-gray-700">
+                                        <SelectContent className="bg-white border-gray-200 text-gray-900 shadow-xl rounded-xl">
                                             <SelectGroup>
-                                                <SelectItem value="org" className="text-white hover:bg-gray-700">Organization &quot;Admin use only&quot;</SelectItem>
-                                                <SelectItem value="personal" className="text-white hover:bg-gray-700">Personal</SelectItem>
+                                                <SelectItem value="org" className="cursor-pointer py-3 focus:bg-gray-50">
+                                                    <div className="flex items-center gap-2">
+                                                        <Building2 className="w-4 h-4 text-blue-600" />
+                                                        <span>Organization (Admin Use)</span>
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem value="personal" className="cursor-pointer py-3 focus:bg-gray-50">
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="w-4 h-4 text-gray-500" />
+                                                        <span>Personal Account</span>
+                                                    </div>
+                                                </SelectItem>
                                             </SelectGroup>
                                         </SelectContent>
                                     </Select>
@@ -73,14 +84,14 @@ function AccountTypeValidation({ setOrgName, setAccountType }: AccountSetupFormP
                                 control={form.control}
                                 name="orgName"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-white">Organization Name</FormLabel>
+                                    <FormItem className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <FormLabel className="text-gray-700 font-medium">Organization Name</FormLabel>
                                         <FormControl>
                                             <Input
                                                 {...field}
                                                 type="text"
-                                                placeholder="Your organization name"
-                                                className="w-full px-4 h-10 bg-gray-800 border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
+                                                placeholder="e.g. Acme Corp"
+                                                className="w-full px-4 h-11 bg-white border-gray-200 text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-gray-400"
                                             />
                                         </FormControl>
                                         <FormMessage />

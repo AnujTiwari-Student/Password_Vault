@@ -14,6 +14,7 @@ import { UnifiedVaultList } from "../vaults/ItemList";
 
 interface DashboardContentProps {
   activeTab: string;
+  setActiveTab: (tab: string) => void;
   user: User;
   currentOrgId?: string;
 }
@@ -24,13 +25,14 @@ const ContentWrapper: React.FC<{ children: React.ReactNode }> = ({
 
 export const DashboardContent: React.FC<DashboardContentProps> = ({
   activeTab,
+  setActiveTab,
   user,
   currentOrgId,
 }) => {
   const renderContent = () => {
     switch (activeTab as DashboardTab) {
       case "Dashboard":
-        return <DashboardOverview />;
+        return <DashboardOverview setActiveTab={setActiveTab} />;
 
       case "Items":
       case "Org Items":
@@ -62,7 +64,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({
         return <NotificationBadge />;
 
       default:
-        return <DashboardOverview />;
+        return <DashboardOverview setActiveTab={setActiveTab} />;
     }
   };
 

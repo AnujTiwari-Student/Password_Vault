@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { FormError } from '../auth/form-error';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert
 import { FormSuccess } from '../auth/form-success';
 import { toast } from "sonner";
 import { 
@@ -129,7 +129,7 @@ export const AcceptInviteModal: React.FC<AcceptInviteModalProps> = ({
         errorMessage = error.message;
       }
       setError(errorMessage);
-      toast.error(errorMessage);
+      // We don't toast error here because we show it in the Alert component
     } finally {
       setAccepting(false);
     }
@@ -237,6 +237,23 @@ export const AcceptInviteModal: React.FC<AcceptInviteModalProps> = ({
             </div>
           </div>
 
+          {/* Error Alert - Replaced FormError */}
+          {error && (
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+              <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900 shadow-sm">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <div className="ml-2">
+                  <AlertTitle className="text-red-800 font-semibold tracking-tight text-sm">
+                    Unable to Join Organization
+                  </AlertTitle>
+                  <AlertDescription className="text-red-700 mt-1 text-xs leading-relaxed font-medium">
+                    {error}
+                  </AlertDescription>
+                </div>
+              </Alert>
+            </div>
+          )}
+
           {/* Role Permissions */}
           <div className="bg-blue-50 rounded-xl border border-blue-100 p-4">
             <p className="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2">
@@ -302,8 +319,7 @@ export const AcceptInviteModal: React.FC<AcceptInviteModalProps> = ({
               Required to securely unwrap the organization vault key.
             </p>
           </div>
-
-          <FormError message={error} />
+          
           <FormSuccess message={success} />
         </div>
 

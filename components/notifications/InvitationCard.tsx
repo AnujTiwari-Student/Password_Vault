@@ -22,7 +22,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
 
       <div className="flex flex-col sm:flex-row gap-4 items-start">
         {/* Icon */}
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-100 text-blue-600 shadow-sm group-hover:scale-105 transition-transform">
             <Mail className="w-6 h-6" />
           </div>

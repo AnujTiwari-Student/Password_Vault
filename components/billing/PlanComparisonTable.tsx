@@ -10,6 +10,17 @@ export const PlanComparisonTable: React.FC<PlanComparisonTableProps> = ({
   plans,
   isOrgVault,
 }) => {
+  // Helper to get org limit if not present in plan object, matching api/orgs/route.ts
+  const getOrgLimit = (plan: BillingPlan) => {
+    // @ts-expect-error handling potential missing property on interface
+    if (plan.limits.orgs) return plan.limits.orgs;
+    
+    const name = plan.name.toLowerCase();
+    if (name.includes("enterprise")) return 8;
+    if (name.includes("pro")) return 5;
+    return 2; // Basic/Free default
+  };
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
@@ -43,6 +54,17 @@ export const PlanComparisonTable: React.FC<PlanComparisonTableProps> = ({
                 </td>
               ))}
             </tr>
+            
+            {/* Organization Limit Row */}
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="py-4 px-6 text-gray-700 font-medium">Organizations</td>
+              {plans.map((plan) => (
+                <td key={plan.id} className="text-center py-4 px-6 text-gray-900 font-semibold">
+                  {getOrgLimit(plan)}
+                </td>
+              ))}
+            </tr>
+
             {isOrgVault && (
               <tr className="hover:bg-gray-50 transition-colors">
                 <td className="py-4 px-6 text-gray-700 font-medium">Members</td>

@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/db";
 import { auth } from "@/lib/auth";
 
+const PLAN_MEMBER_LIMITS = {
+  free: 5,
+  basic: 5,
+  professional: 20,
+  enterprise: 50,
+} as const;
+
+type PlanType = keyof typeof PLAN_MEMBER_LIMITS;
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -52,6 +61,42 @@ export async function POST(request: NextRequest) {
         errors: { _form: ["Invalid, expired, or already processed invitation"] }
       }, { status: 400 });
     }
+
+    // --- CHECK MEMBER LIMIT (Excluding Owner) ---
+    const ownerId = invitation.org.owner_user_id;
+
+    const ownerUser = await prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { plan_type: true }
+    });
+
+    const ownerPlan = (ownerUser?.plan_type as PlanType) || 'free';
+    const memberLimit = PLAN_MEMBER_LIMITS[ownerPlan] || 5;
+
+    const ownedOrgs = await prisma.org.findMany({
+      where: { owner_user_id: ownerId },
+      select: { id: true }
+    });
+    
+    const ownedOrgIds = ownedOrgs.map(o => o.id);
+
+    // FIX: Count members ONLY if they are NOT the owner
+    const currentTotalMembers = await prisma.membership.count({
+      where: {
+        org_id: { in: ownedOrgIds },
+        user_id: { not: ownerId } // <--- This excludes the owner from the count
+      }
+    });
+
+    if (currentTotalMembers >= memberLimit) {
+      return NextResponse.json({
+        success: false,
+        errors: { 
+          _form: [`The organization owner has reached their member limit of ${memberLimit} (excluding themselves). Please contact the organization owner to upgrade their plan.`] 
+        }
+      }, { status: 403 });
+    }
+    // ---------------------------------------------
 
     const existingMembership = await prisma.membership.findFirst({
       where: {

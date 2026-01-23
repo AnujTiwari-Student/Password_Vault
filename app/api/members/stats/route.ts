@@ -73,68 +73,53 @@ export async function GET(request: NextRequest): Promise<NextResponse<APIRespons
       }, { status: 403 });
     }
 
-    let loginCount = 0;
-    let lastLogin: string | null = null;
-    let itemAccessCount = 0;
-    let invitedByData: { name: string; email: string } | null = null;
-
-    try {
-        // @ts-expect-error $queryRaw type issue
-      const auditTableExists = await prisma.$queryRaw`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = 'audit'
-        );
-      `;
-
-      if (auditTableExists) {
-        loginCount = await prisma.audit.count({
-          where: {
-            actor_user_id: membership.user_id,
-            org_id: membership.org_id,
-            action: 'USER_LOGIN'
-          }
-        }).catch(() => 0);
-
-        const lastLoginRecord = await prisma.audit.findFirst({
-          where: {
-            actor_user_id: membership.user_id,
-            org_id: membership.org_id,
-            action: 'USER_LOGIN'
-          },
-          orderBy: {
-            // @ts-expect-error $queryRaw type issue
-            created_at: 'desc'
-          },
-          select: {
-            // @ts-expect-error $queryRaw type issue
-            created_at: true
-          }
-        }).catch(() => null);
-
-        if (lastLoginRecord) {
-            // @ts-expect-error $queryRaw type issue
-          lastLogin = lastLoginRecord.created_at.toISOString();
-        }
-
-        itemAccessCount = await prisma.audit.count({
-          where: {
-            actor_user_id: membership.user_id,
-            org_id: membership.org_id,
-            action: 'ITEM_ACCESSED'
-          }
-        }).catch(() => 0);
+    // --- STATS CALCULATION ---
+    
+    // 1. Login Count (Strictly counts explicit login events)
+    const loginCount = await prisma.audit.count({
+      where: {
+        actor_user_id: membership.user_id,
+        org_id: membership.org_id,
+        action: 'USER_LOGIN'
       }
-    } catch (error) {
-      console.log("Audit table not accessible, using default values", error);
-    }
+    });
 
-    try {
+    // 2. Last Active (Changed to find the MOST RECENT activity of ANY kind)
+    const lastActivityRecord = await prisma.audit.findFirst({
+      where: {
+        actor_user_id: membership.user_id,
+        org_id: membership.org_id,
+        // Removed 'action' filter so it captures any activity (View, Edit, Login, etc.)
+      },
+      orderBy: {
+        ts: 'desc'
+      },
+      select: {
+        ts: true
+      }
+    });
+
+    const lastLogin = lastActivityRecord ? lastActivityRecord.ts.toISOString() : null;
+
+    // 3. Items Accessed
+    const itemAccessCount = await prisma.audit.count({
+      where: {
+        actor_user_id: membership.user_id,
+        org_id: membership.org_id,
+        action: {
+          in: ['ITEM_ACCESSED', 'ITEM_CREATED', 'ITEM_UPDATED']
+        }
+      }
+    });
+
+    // 4. Invited By Info
+    let invitedByData: { name: string; email: string } | null = null;
+    
+    if (membership.user.email) {
       const inviteRecord = await prisma.invite.findFirst({
         where: {
           org_id: membership.org_id,
-          email: membership.user.email || undefined,
+          email: membership.user.email,
           status: 'accepted'
         },
         include: {
@@ -144,8 +129,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<APIRespons
               email: true
             }
           }
+        },
+        orderBy: {
+          created_at: 'desc'
         }
-      }).catch(() => null);
+      });
 
       if (inviteRecord?.invitedBy) {
         invitedByData = {
@@ -153,15 +141,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<APIRespons
           email: inviteRecord.invitedBy.email || 'Unknown'
         };
       }
-    } catch (error) {
-      console.log("Could not fetch invite record", error);
     }
 
     return NextResponse.json({
       success: true,
       data: {
         totalLogins: loginCount,
-        lastLogin: lastLogin,
+        lastLogin: lastLogin, // This maps to "Last Active" in UI
         itemsAccessed: itemAccessCount,
         invitedBy: invitedByData
       }

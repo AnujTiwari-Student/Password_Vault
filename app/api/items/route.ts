@@ -2,14 +2,22 @@ import { prisma } from "@/db";
 import { currentUser } from "@/lib/current-user";
 import { NextRequest, NextResponse } from "next/server";
 
-type PlanType = "basic" | "professional" | "enterprise" | "free";
+const PLAN_LIMITS = {
+  free: {
+    maxItems: 100,
+  },
+  basic: {
+    maxItems: 100,
+  },
+  professional: {
+    maxItems: 500,
+  },
+  enterprise: {
+    maxItems: 1000,
+  },
+} as const;
 
-const PLAN_LIMITS: Record<PlanType, number> = {
-  free: 100,
-  basic: 100,
-  professional: 500,
-  enterprise: 1000,
-};
+type PlanType = keyof typeof PLAN_LIMITS;
 
 export async function GET(req: NextRequest) {
   try {
@@ -132,6 +140,11 @@ export async function POST(req: NextRequest) {
         type: true,
         user_id: true,
         org_id: true,
+        org: {
+          select: {
+            owner_user_id: true,
+          },
+        },
       },
     });
 
@@ -144,6 +157,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let limitCheckUserId: string | null = null;
+
     if (vault.type === "personal") {
       if (vault.user_id !== user.id) {
         return NextResponse.json(
@@ -153,6 +168,7 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
+      limitCheckUserId = user.id;
     } else if (vault.type === "org") {
       const membership = await prisma.membership.findFirst({
         where: {
@@ -178,26 +194,38 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
+
+      if (!vault.org?.owner_user_id) {
+        return NextResponse.json(
+          { message: "Organization owner not found" },
+          { status: 500 }
+        );
+      }
+      limitCheckUserId = vault.org.owner_user_id;
     }
 
-    const userPlan = await prisma.user.findUnique({
-      where: { id: user.id },
+    const planUser = await prisma.user.findUnique({
+      where: { id: limitCheckUserId! },
       select: { plan_type: true },
     });
 
-    const currentItemsCount = await prisma.item.count({
-      where: { vault_id: vaultId },
+    const userPlanType = (planUser?.plan_type as PlanType) || "free";
+    const limitConfig = PLAN_LIMITS[userPlanType] || PLAN_LIMITS.free;
+    const maxItems = limitConfig.maxItems;
+
+    const currentTotalItems = await prisma.item.count({
+      where: {
+        vault_id: vaultId,
+      },
     });
 
-    const planLimit =
-      PLAN_LIMITS[(userPlan?.plan_type as PlanType) || "free"] || 100;
-
-    if (currentItemsCount >= planLimit && planLimit !== 1000) {
+    if (currentTotalItems >= maxItems) {
       return NextResponse.json(
         {
-          message: `Plan limit exceeded (${currentItemsCount}/${planLimit}). Upgrade to ${
-            userPlan?.plan_type === "basic" ? "Professional" : "Enterprise"
-          } plan.`,
+          message: `Plan limit reached (${currentTotalItems}/${maxItems}). The organization owner needs to upgrade to the ${
+            userPlanType === "basic" ? "Professional" : "Enterprise"
+          } plan to add more items.`,
+          code: "LIMIT_REACHED",
         },
         { status: 402 }
       );

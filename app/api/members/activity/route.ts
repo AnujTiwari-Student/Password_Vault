@@ -71,62 +71,45 @@ export async function GET(request: NextRequest): Promise<NextResponse<APIRespons
 
     let formattedActivities: MemberActivity[] = [];
 
-    try {
-        // @ts-expect-error Raw query result
-      const auditTableExists = await prisma.$queryRaw`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = 'audit'
-        );
-      `;
-
-      if (auditTableExists) {
-        const activities = await prisma.audit.findMany({
-          where: {
-            actor_user_id: membership.user_id,
-            org_id: membership.org_id
-          },
-          orderBy: {
-            // @ts-expect-error Raw query result
-            created_at: 'desc'
-          },
-          take: 10,
-          select: {
-            id: true,
-            action: true,
-            // @ts-expect-error Raw query result
-            created_at: true,
-            ip: true
-          }
-        }).catch(() => []);
-
-        const actionDescriptions: Record<string, string> = {
-          'USER_LOGIN': 'Logged into the system',
-          'ITEM_ACCESSED': 'Accessed a vault item',
-          'ITEM_CREATED': 'Created a new item',
-          'ITEM_UPDATED': 'Updated an item',
-          'ITEM_DELETED': 'Deleted an item',
-          'INVITE_ACCEPTED': 'Accepted organization invitation',
-          'ROLE_CHANGED': 'Role was changed',
-          'TEAM_JOINED': 'Joined a team',
-          'TEAM_LEFT': 'Left a team',
-          'MEMBER_ADDED': 'New member was added',
-          'MEMBER_REMOVED': 'Member was removed'
-        };
-
-        formattedActivities = activities.map(activity => ({
-          id: activity.id,
-          action: activity.action,
-        //   @ts-expect-error Raw query result
-          timestamp: activity.created_at.toISOString(),
-          ip: activity.ip || 'Unknown',
-          description: actionDescriptions[activity.action] || activity.action
-        }));
+    const activities = await prisma.audit.findMany({
+      where: {
+        actor_user_id: membership.user_id,
+        org_id: membership.org_id
+      },
+      orderBy: {
+        ts: 'desc'
+      },
+      take: 20,
+      select: {
+        id: true,
+        action: true,
+        ts: true,
+        ip: true
       }
-    } catch (error) {
-      console.log("Could not fetch audit records, returning empty activities", error);
-    }
+    });
+
+    const actionDescriptions: Record<string, string> = {
+      'USER_LOGIN': 'Logged into the system',
+      'ITEM_ACCESSED': 'Accessed a vault item',
+      'ITEM_CREATED': 'Created a new item',
+      'ITEM_UPDATED': 'Updated an item',
+      'ITEM_DELETED': 'Deleted an item',
+      'INVITE_ACCEPTED': 'Accepted organization invitation',
+      'ROLE_CHANGED': 'Role was changed',
+      'TEAM_JOINED': 'Joined a team',
+      'TEAM_LEFT': 'Left a team',
+      'MEMBER_ADDED': 'New member was added',
+      'MEMBER_REMOVED': 'Member was removed',
+      'VIEW_ORGANIZATIONS': 'Viewed organization dashboard'
+    };
+
+    formattedActivities = activities.map(activity => ({
+      id: activity.id,
+      action: activity.action,
+      timestamp: activity.ts.toISOString(),
+      ip: activity.ip || 'Unknown',
+      description: actionDescriptions[activity.action] || `Performed action: ${activity.action}`
+    }));
 
     return NextResponse.json({
       success: true,
