@@ -168,10 +168,10 @@ export const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                 alt={member.user?.name || "User"}
                 width={72}
                 height={72}
-                className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-2xl object-cover border-2 border-white shadow-sm" 
+                className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl object-cover border-2 border-white shadow-sm" 
               />
             ) : (
-              <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] bg-white rounded-2xl flex items-center justify-center border-2 border-gray-100 shadow-sm text-gray-400">
+              <div className="w-16 h-16 sm:w-18 sm:h-18 bg-white rounded-2xl flex items-center justify-center border-2 border-gray-100 shadow-sm text-gray-400">
                 <User className="w-8 h-8" />
               </div>
             )}
@@ -199,7 +199,7 @@ export const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
               {orgName && (
                 <div className="flex items-center gap-1.5 text-sm text-gray-600 mt-3 bg-white px-3 py-1.5 rounded-lg border border-gray-200 w-fit shadow-sm">
                   <Building2 className="w-4 h-4 text-gray-400" />
-                  <span className="font-medium truncate max-w-[200px] sm:max-w-none">{orgName}</span> {/* Truncate org name on mobile */}
+                  <span className="font-medium truncate max-w-50 sm:max-w-none">{orgName}</span> {/* Truncate org name on mobile */}
                 </div>
               )}
             </div>
@@ -282,7 +282,7 @@ export const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
 
               {stats?.invitedBy && (
                 <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-sm text-gray-400 flex-shrink-0"> {/* Prevent shrink */}
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-sm text-gray-400 shrink-0"> 
                     <User className="w-5 h-5" />
                   </div>
                   <div className="min-w-0"> {/* Allow text truncation */}
@@ -326,7 +326,7 @@ export const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                           )}
                         </div>
                         <div className="flex-1 min-w-0 pb-1">
-                          <p className="text-sm text-gray-900 font-medium break-words"> {/* Allow breaking long words */}
+                          <p className="text-sm text-gray-900 font-medium wrap-break-words"> {/* Allow breaking long words */}
                             {activity.description}
                           </p>
                           <div className="flex flex-wrap items-center gap-3 mt-1.5"> {/* Allow wrapping */}
@@ -339,7 +339,7 @@ export const MemberDetailsModal: React.FC<MemberDetailsModalProps> = ({
                               {formatTime(activity.timestamp)}
                             </span>
                             {activity.ip && (
-                              <span className="text-[10px] text-gray-400 font-mono bg-gray-100 px-1.5 py-0.5 rounded truncate max-w-[100px] sm:max-w-none"> {/* Truncate IP on small screens */}
+                              <span className="text-[10px] text-gray-400 font-mono bg-gray-100 px-1.5 py-0.5 rounded truncate max-w-25 sm:max-w-none"> {/* Truncate IP on small screens */}
                                 {activity.ip}
                               </span>
                             )}
