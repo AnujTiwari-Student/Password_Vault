@@ -55,6 +55,70 @@ export async function POST(request: Request) {
   }
 
   try {
+    console.log("=== Starting cleanup for user:", userId);
+    
+    const userSubscriptions = await prisma.subscription.deleteMany({
+      where: { user_id: userId }
+    });
+    console.log("Deleted subscriptions:", userSubscriptions.count);
+
+    const userVaults = await prisma.vault.findMany({
+      where: {
+        OR: [
+          { user_id: userId },
+          { created_by: userId }
+        ]
+      },
+      select: { id: true, org_id: true, name: true, type: true }
+    });
+
+    console.log("Found user vaults to delete:", userVaults.length);
+
+    for (const vault of userVaults) {
+      try {
+        await prisma.vault.delete({
+          where: { id: vault.id }
+        });
+        console.log("Deleted vault:", vault.id);
+      } catch (error) {
+        console.log("Error deleting vault:", vault.id, error);
+      }
+    }
+
+    const userOrgs = await prisma.org.findMany({
+      where: { owner_user_id: userId },
+      select: { id: true, name: true }
+    });
+
+    console.log("Found orgs to delete:", userOrgs.length);
+
+    for (const org of userOrgs) {
+      try {
+        await prisma.membership.deleteMany({
+          where: { org_id: org.id }
+        });
+        await prisma.orgVaultKey.deleteMany({
+          where: { org_id: org.id }
+        });
+        await prisma.audit.deleteMany({
+          where: { org_id: org.id }
+        });
+        await prisma.org.delete({
+          where: { id: org.id }
+        });
+        console.log("Deleted org:", org.id, org.name);
+      } catch (error) {
+        console.log("Error deleting org:", org.id, error);
+      }
+    }
+
+    const deletedKeys = await prisma.personalVaultKey.deleteMany({
+      where: { user_id: userId }
+    });
+    console.log("Deleted personal vault keys:", deletedKeys.count);
+
+    console.log("=== Cleanup complete, starting transaction ===");
+
     const result = await prisma.$transaction(async (tx) => {
       let newOrg = null;
 
@@ -112,7 +176,7 @@ export async function POST(request: Request) {
             type: "org",
             ovk_id: orgVaultKey.id,
             orgVaultKeyId: orgVaultKey.id,
-            created_by: userId, 
+            created_by: userId,
           },
         });
 
@@ -132,9 +196,9 @@ export async function POST(request: Request) {
             },
           },
         });
-      }
 
-      else if (account_type === "personal") {
+        console.log("Created org vault:", vault.id);
+      } else if (account_type === "personal") {
         const personalVaultKey = await tx.personalVaultKey.create({
           data: {
             user_id: userId,
@@ -142,14 +206,16 @@ export async function POST(request: Request) {
           },
         });
 
+        console.log("Creating personal vault for user:", userId);
+        
         const vault = await tx.vault.create({
           data: {
-            name: "Personal Vault",
+            name: `Personal Vault - ${updatedUser.email}`,
             type: "personal",
             user_id: userId,
             ovk_id: personalVaultKey.id,
             personalVaultKeyId: personalVaultKey.id,
-            created_by: userId, 
+            created_by: userId,
           },
         });
 
@@ -166,6 +232,8 @@ export async function POST(request: Request) {
             },
           },
         });
+
+        console.log("Created personal vault:", vault.id);
       }
 
       return [updatedUser, newOrg];

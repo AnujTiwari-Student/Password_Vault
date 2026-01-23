@@ -35,8 +35,8 @@ export const login = async (data: z.infer<typeof LoginSchema>): Promise<LoginAct
                      headersList.get('x-real-ip') || 
                      'unknown';
     
-    const rateLimitKey = `${data.email}:${clientIP}`;
-    authRateLimit(rateLimitKey);
+    // const rateLimitKey = `${data.email}:${clientIP}`;
+    // authRateLimit(rateLimitKey);
 
     const validatedFields = LoginSchema.safeParse(data);
 

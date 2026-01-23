@@ -4,12 +4,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   Check,
   Lock,
-  KeyRound,
   Copy,
-  AlertCircle,
-  Shield,
+  ShieldCheck,
   EyeOff,
   Eye,
+  Loader2,
+  AlertTriangle,
+  ArrowRight,
+  Shield,
 } from "lucide-react";
 import {
   bufferToBase64,
@@ -199,145 +201,173 @@ const MasterPassphraseSetup: React.FC = () => {
     (accountType === "personal" || orgName.trim().length > 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-2xl bg-gray-900 shadow-2xl rounded-2xl p-6 sm:p-10 border border-gray-700 relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
-              <Shield className="w-7 h-7 text-blue-400" />
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      <div className="mb-8 flex flex-col items-center text-center space-y-2">
+        <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+          <ShieldCheck className="w-8 h-8 text-blue-600" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Secure Your Vault</h1>
+        <p className="text-sm text-gray-500 max-w-md">
+          End-to-end encryption setup. This Master Key is the only way to unlock your data.
+        </p>
+      </div>
+
+      <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">1</div>
+              Setup Details
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">Zero-Knowledge Setup</h1>
-              <p className="text-xs text-gray-400 mt-0.5">End-to-end encrypted security</p>
-            </div>
-          </div>
-          <div className="mb-8 bg-gray-800 border border-gray-700 rounded-xl p-5">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="text-gray-300 leading-relaxed">
-                  Your account is secure, but you must first generate your{" "}
-                  <strong className="text-white">Master Key</strong>. This
-                  24-word phrase is the{" "}
-                  <strong className="text-white">only</strong> way to decrypt
-                  your organizations secrets.
-                </p>
-                <p className="text-red-400 font-semibold mt-3 flex items-center">
-                  <Lock className="w-4 h-4 mr-2" />
-                  Copy and store it safely. We never store this key.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="mb-8">
             <AccountTypeValidation
               setOrgName={setOrgName}
               setAccountType={setAccountType}
             />
           </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 mb-8">
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative overflow-hidden">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-base font-bold text-blue-400 flex items-center">
-                <KeyRound className="w-5 h-5 mr-2" />
-                Your 24-Word Master Key
-              </span>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">2</div>
+                Save Your Master Key
+              </div>
+              <div className="flex gap-2">
                 <button
                   onClick={() => setShowKey(!showKey)}
-                  className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
+                  className="p-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-200"
                   disabled={!isReady || isProcessing}
                 >
-                  {showKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
                 <button
                   onClick={handleCopy}
-                  className={`px-4 py-2 text-sm font-semibold rounded-lg flex items-center transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
                     isCopied
-                      ? "bg-green-600 text-white shadow-lg"
-                      : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg"
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-gray-900 text-white hover:bg-gray-800 shadow-sm"
                   }`}
                   disabled={!isReady || isProcessing}
                 >
-                  {isCopied ? (
-                    <>
-                      <Check className="w-4 h-4 mr-2" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy Key
-                    </>
-                  )}
+                  {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  {isCopied ? "Copied" : "Copy Key"}
                 </button>
               </div>
             </div>
-            <div
-              className={`font-mono text-sm break-words p-4 bg-gray-950 border border-gray-700 rounded-lg transition-all duration-200 ${
-                showKey
-                  ? "text-gray-200 select-all"
-                  : "text-transparent select-none blur-sm"
-              }`}
-            >
-              {mnemonic || "Generating your secure master key..."}
+
+            <div className="relative group">
+              <div className={`
+                grid grid-cols-3 sm:grid-cols-4 gap-2 transition-all duration-300
+                ${showKey ? "opacity-100 blur-0" : "opacity-40 blur-md select-none"}
+              `}>
+                {mnemonic ? (
+                  mnemonic.split(" ").map((word, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg">
+                      <span className="text-[10px] font-mono text-gray-400 select-none w-4">{index + 1}</span>
+                      <span className="text-sm font-medium text-gray-700 font-mono">{word}</span>
+                    </div>
+                  ))
+                ) : (
+                  Array.from({ length: 24 }).map((_, i) => (
+                    <div key={i} className="h-9 bg-gray-100 rounded-lg animate-pulse" />
+                  ))
+                )}
+              </div>
+
+              {!showKey && (
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                  <button 
+                    onClick={() => setShowKey(true)}
+                    className="flex flex-col items-center gap-2 bg-white/90 backdrop-blur-sm px-6 py-4 rounded-xl border border-gray-200 shadow-sm hover:scale-105 transition-transform"
+                  >
+                    <Lock className="w-6 h-6 text-gray-400" />
+                    <span className="text-sm font-semibold text-gray-600">Click to Reveal Key</span>
+                  </button>
+                </div>
+              )}
             </div>
-            {!showKey && (
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                Click the eye icon to reveal your key
+
+            <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 leading-relaxed">
+                <span className="font-bold">Warning:</span> Store this safely. We cannot recover your account if you lose this key.
               </p>
-            )}
-          </div>
-          <button
-            onClick={handleConfirmAndStore}
-            disabled={!canProceed}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-semibold py-4 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-          >
-            {isProcessing ? (
-              <span className="flex items-center justify-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Creating Organization...
-              </span>
-            ) : (
-              "I have copied the key. Confirm & Create Organization"
-            )}
-          </button>
-          {!isCopied && isReady && (
-            <p className="mt-4 text-sm text-center text-amber-400 flex items-center justify-center">
-              <AlertCircle className="w-4 h-4 mr-2" />
-              You must copy your master key before proceeding
-            </p>
-          )}
-          <div className="mt-6 p-4 bg-gray-800 border border-gray-700 rounded-lg">
-            <p className="text-xs text-gray-400 text-center leading-relaxed">
-              🔒 Your master key is generated locally and never transmitted to
-              our servers. Store it in a secure password manager or offline
-              location.
-            </p>
-          </div>
-          {status && (
-            <div className="mt-4 p-3 bg-gray-800 border border-gray-700 rounded-lg">
-              <p className="text-xs text-gray-300 text-center">{status}</p>
             </div>
-          )}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full flex flex-col">
+            <h3 className="font-semibold text-gray-900 mb-4">Setup Progress</h3>
+            
+            <div className="space-y-4 flex-1">
+              <div className="flex items-center gap-3">
+                <div className={`p-1 rounded-full transition-colors ${mnemonic ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                  {mnemonic ? <Check className="w-3 h-3" /> : <div className="w-3 h-3" />}
+                </div>
+                <span className={`text-sm ${mnemonic ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                  Generate Keys
+                </span>
+              </div>
+               
+              <div className="flex items-center gap-3">
+                <div className={`p-1 rounded-full transition-colors ${isCopied ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                  {isCopied ? <Check className="w-3 h-3" /> : <div className="w-3 h-3" />}
+                </div>
+                <span className={`text-sm ${isCopied ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                  Copy to clipboard
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className={`p-1 rounded-full transition-colors ${ovkWrapped ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                  {ovkWrapped ? <Check className="w-3 h-3" /> : <Loader2 className="w-3 h-3 animate-spin" />}
+                </div>
+                <span className={`text-sm ${ovkWrapped ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                  Encryption Ready
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <button
+                onClick={handleConfirmAndStore}
+                disabled={!canProceed}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md active:scale-[0.98]"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Finalizing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Complete Setup</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+              
+              {!isCopied && isReady && (
+                <p className="mt-3 text-xs text-center text-red-500 font-medium">
+                  Please copy your master key to proceed
+                </p>
+              )}
+              
+              {status && (
+                <div className="mt-4 p-2 bg-gray-50 border border-gray-100 rounded text-center">
+                  <p className="text-[10px] text-gray-400">{status}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div className="mt-8 text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm">
+          <Shield className="w-3 h-3 text-emerald-500 fill-emerald-500" />
+          <span className="text-xs text-gray-600 font-mono">Zero-Knowledge Architecture Verified</span>
         </div>
       </div>
     </div>

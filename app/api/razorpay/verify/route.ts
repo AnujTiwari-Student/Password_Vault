@@ -20,6 +20,8 @@ export async function POST(request: NextRequest) {
     
     const session = await auth();
     console.log("Session:", session ? "Valid" : "Invalid");
+    console.log("User ID:", session?.user?.id);
+    console.log("User account type:", session?.user?.account_type);
 
     if (!session?.user?.id) {
       console.error("Unauthorized: No session");
@@ -32,7 +34,9 @@ export async function POST(request: NextRequest) {
     const data: VerifyPaymentRequest = await request.json();
     console.log("Verification request data:", {
       ...data,
-      razorpay_signature: data.razorpay_signature ? "[PRESENT]" : "[MISSING]"
+      razorpay_signature: data.razorpay_signature ? "[PRESENT]" : "[MISSING]",
+      vaultType: data.vaultType,
+      vaultId: data.vaultId
     });
 
     const { 
@@ -58,15 +62,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!planId || !billingCycle || !vaultId || !vaultType) {
+    if (!planId || !billingCycle || !vaultId) {
       console.error("Missing subscription fields:", {
         planId: !!planId,
         billingCycle: !!billingCycle,
         vaultId: !!vaultId,
-        vaultType: !!vaultType,
+        vaultType: vaultType || "NOT PROVIDED",
       });
       return NextResponse.json(
         { error: "Missing subscription details" },
+        { status: 400 }
+      );
+    }
+
+    if (!vaultType || (vaultType !== 'org' && vaultType !== 'personal')) {
+      console.error("Invalid vault type:", vaultType);
+      return NextResponse.json(
+        { error: "Invalid vault type. Must be 'org' or 'personal'" },
         { status: 400 }
       );
     }
@@ -113,6 +125,14 @@ export async function POST(request: NextRequest) {
     console.log("Prisma billing cycle:", prismaBillingCycle);
 
     console.log("Updating subscription in database...");
+    console.log("Subscription params:", {
+      vaultId,
+      userId: session.user.id,
+      planId: normalizedPlanId,
+      billingCycle: prismaBillingCycle,
+      vaultType,
+      amount
+    });
     
     const result = await updateUserSubscription({
       vaultId,
@@ -125,6 +145,12 @@ export async function POST(request: NextRequest) {
       vaultType: vaultType as 'org' | 'personal',
     });
 
+    console.log("Update subscription result:", {
+      success: result.success,
+      error: result.error,
+      hasSubscription: !!result.subscription
+    });
+
     if (!result.success) {
       console.error('Failed to update subscription:', result.error);
       return NextResponse.json(
@@ -132,7 +158,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
 
     // @ts-expect-error --- IGNORE ---
     console.log('✓ Subscription updated successfully:', result.subscription?.id);

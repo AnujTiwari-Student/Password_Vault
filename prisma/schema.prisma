@@ -396,8 +396,10 @@ model Subscription {
   id                     String    @id @default(auto()) @map("_id") @db.ObjectId
   vault_id               String    @db.ObjectId
   user_id                String    @db.ObjectId
-  stripe_customer_id     String?
-  stripe_subscription_id String?   @unique
+  
+  razorpay_order_id      String?   @unique
+  razorpay_payment_id    String?
+  
   price_id               String?
   plan                   String
   billing_cycle          String
@@ -405,6 +407,7 @@ model Subscription {
   amount                 Float?
   currency               String?
   payment_method         String?
+  
   next_billing_date      DateTime?
   last_payment_date      DateTime?
   cancelled_at           DateTime?
@@ -417,5 +420,7 @@ model Subscription {
   user  User  @relation(fields: [user_id], references: [id])
   vault Vault @relation(fields: [vault_id], references: [id])
 
+  @@index([vault_id])
+  @@index([user_id])
   @@map("subscriptions")
 }

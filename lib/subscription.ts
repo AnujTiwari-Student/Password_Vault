@@ -30,6 +30,9 @@ export async function updateUserSubscription({
   vaultType,
 }: UpdateSubscriptionParams): Promise<SubscriptionResult> {
   try {
+    console.log("=== updateUserSubscription called ===");
+    console.log("Params:", { vaultId, userId, planId, billingCycle, razorpayOrderId, razorpayPaymentId, amount, vaultType });
+
     const currentPeriodStart = new Date();
     const currentPeriodEnd = new Date();
     const nextBillingDate = new Date();
@@ -49,9 +52,12 @@ export async function updateUserSubscription({
       },
     });
 
+    console.log("Existing subscription:", existingSubscription ? "Found" : "Not found");
+
     let subscription;
 
     if (existingSubscription) {
+      console.log("Updating existing subscription...");
       subscription = await prisma.subscription.update({
         where: {
           id: existingSubscription.id,
@@ -60,9 +66,11 @@ export async function updateUserSubscription({
           plan: planId,
           billing_cycle: billingCycle,
           status: SubscriptionStatus.active,
-          amount: amount / 100, 
+          amount: amount / 100,
           currency: 'INR',
           payment_method: 'razorpay',
+          razorpay_order_id: razorpayOrderId,
+          razorpay_payment_id: razorpayPaymentId,
           next_billing_date: nextBillingDate,
           last_payment_date: currentPeriodStart,
           current_period_start: currentPeriodStart,
@@ -72,7 +80,9 @@ export async function updateUserSubscription({
           updated_at: new Date(),
         },
       });
+      console.log("✓ Subscription updated successfully");
     } else {
+      console.log("Creating new subscription...");
       subscription = await prisma.subscription.create({
         data: {
           vault_id: vaultId,
@@ -80,9 +90,11 @@ export async function updateUserSubscription({
           plan: planId,
           billing_cycle: billingCycle,
           status: SubscriptionStatus.active,
-          amount: amount / 100, 
+          amount: amount / 100,
           currency: 'INR',
           payment_method: 'razorpay',
+          razorpay_order_id: razorpayOrderId,
+          razorpay_payment_id: razorpayPaymentId,
           next_billing_date: nextBillingDate,
           last_payment_date: currentPeriodStart,
           current_period_start: currentPeriodStart,
@@ -91,8 +103,10 @@ export async function updateUserSubscription({
           updated_at: new Date(),
         },
       });
+      console.log("✓ New subscription created successfully");
     }
 
+    console.log("Updating user plan type...");
     await prisma.user.update({
       where: {
         id: userId,
@@ -101,8 +115,10 @@ export async function updateUserSubscription({
         plan_type: planId,
       },
     });
+    console.log("✓ User plan type updated");
 
     if (vaultType === 'org') {
+      console.log("Updating org plan for vault type: org");
       const vault = await prisma.vault.findUnique({
         where: { id: vaultId },
         select: { org_id: true },
@@ -119,9 +135,13 @@ export async function updateUserSubscription({
             plan_renewal_date: nextBillingDate,
           },
         });
+        console.log("✓ Org plan updated");
+      } else {
+        console.log("⚠ No org_id found for vault");
       }
     }
 
+    console.log("Creating audit log...");
     await prisma.logs.create({
       data: {
         user_id: userId,
@@ -141,16 +161,22 @@ export async function updateUserSubscription({
         },
       },
     });
+    console.log("✓ Audit log created");
 
-    console.log(`Subscription updated successfully for vault: ${vaultId}`);
+    console.log(`✓ Subscription updated successfully for vault: ${vaultId}`);
     
     return {
       success: true,
-    //   @ts-expect-error --- IGNORE ---
+      // @ts-expect-error --- IGNORE ---
       subscription,
     };
   } catch (error) {
-    console.error('Error updating subscription:', error);
+    console.error('=== Error updating subscription ===');
+    console.error('Error:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update subscription',
@@ -210,7 +236,7 @@ export async function cancelUserSubscription(
     
     return {
       success: true,
-    //   @ts-expect-error --- IGNORE ---
+      // @ts-expect-error --- IGNORE ---
       subscription: updatedSubscription,
     };
   } catch (error) {
@@ -418,6 +444,8 @@ export async function reactivateSubscription(
       },
       data: {
         status: SubscriptionStatus.active,
+        razorpay_order_id: razorpayOrderId,
+        razorpay_payment_id: razorpayPaymentId,
         cancelled_at: null,
         will_downgrade_at: null,
         last_payment_date: currentPeriodStart,
@@ -455,7 +483,7 @@ export async function reactivateSubscription(
 
     return {
       success: true,
-    //   @ts-expect-error --- IGNORE ---
+      // @ts-expect-error --- IGNORE ---
       subscription: updatedSubscription,
     };
   } catch (error) {
